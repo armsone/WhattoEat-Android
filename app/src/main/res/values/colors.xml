@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mint_base">#FBF8F2</color>
+    <color name="ivory">#FFFDF7</color>
+    <color name="caramel">#9E5724</color>
+    <color name="caramel_deep">#7A4F2B</color>
+    <color name="chrome">#C7BFAD</color>
+    <color name="charcoal_text">#2E3338</color>
+    <color name="accent_red">#E41E25</color>
+    <color name="selection_mint">#DBF2E6</color>
+    <color name="mint_ink">#1F5742</color>
+    <color name="leather_light">#B36B30</color>
+    <color name="canvas_line">#D6CFBD</color>
+</resources>
