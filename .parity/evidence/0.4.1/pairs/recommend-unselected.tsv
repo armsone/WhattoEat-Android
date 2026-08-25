@@ -1,0 +1,3 @@
+platform	state	capture	pixels	sha256
+ios	unselected	../ios-iphone17/home-unselected.png	1206x2622	48e99b697e825058efb602555147cab7bfe23425377b354478677ffab01c6ebc
+android	unselected	../android-sm-f968n/home.png	822x1918	8c65947f18916223263d8d6929bce5c9098c76f8f0c2fefb1b20c8406781d9ab

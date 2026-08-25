@@ -1,0 +1,108 @@
+{
+  "ledger_version": 1,
+  "rows": [
+    {
+      "id": "global_recommend_unselected.center_tab.rendering",
+      "route_state": "global_recommend_unselected",
+      "element": "center_tab",
+      "dimension": "neutral bag rendering",
+      "classification": "visual",
+      "source_ref": {
+        "kind": "capture",
+        "value": "iOS center tab shows the product lunch bag on a white-to-ivory surface with a white label",
+        "location": ".parity/evidence/0.4.1/ios-iphone17/home-unselected.png"
+      },
+      "target_observation": "Android physical-device capture matches the full-color lunch bag, neutral surface, and white label contract.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/ui/components/AppBottomBar.kt:126",
+      "fixture": "whattoeat-0.4.1-bottom-nav",
+      "fallback_capable": false,
+      "evidence": [
+        {
+          "id": "ev-unselected-pair-1",
+          "type": "capture_pair",
+          "post_change": true,
+          "path": ".parity/evidence/0.4.1/pairs/recommend-unselected.tsv",
+          "sha256": "1d7c53209c00739d2c6e2377567e3d3d9184f8599474beb362f82362c6871085"
+        }
+      ],
+      "status": "matched",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-25",
+          "action": "Replaced the dice with the shared lunch-bag asset and captured both platforms.",
+          "result": "Matched on iPhone simulator and Android SM-F968N physical device."
+        }
+      ],
+      "reopen_history": []
+    },
+    {
+      "id": "global_recommend_selected.center_tab.rendering",
+      "route_state": "global_recommend_selected",
+      "element": "center_tab",
+      "dimension": "selected styling",
+      "classification": "visual",
+      "source_ref": {
+        "kind": "capture",
+        "value": "Selected recommendation keeps a neutral surface and white label; only the bottom indicator is red",
+        "location": ".parity/evidence/0.4.1/ios-iphone17/recommend-selected.png"
+      },
+      "target_observation": "Android selected capture keeps the circle neutral and label white, with red confined to the bottom indicator.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/ui/components/AppBottomBar.kt:280",
+      "fixture": "whattoeat-0.4.1-bottom-nav",
+      "fallback_capable": false,
+      "evidence": [
+        {
+          "id": "ev-selected-pair-1",
+          "type": "capture_pair",
+          "post_change": true,
+          "path": ".parity/evidence/0.4.1/pairs/recommend-selected.tsv",
+          "sha256": "2960bef4733d93b50f058c9ce9fdcff71629c8c8ef516a41cb0eba9523dd7aa4"
+        }
+      ],
+      "status": "matched",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-25",
+          "action": "Removed selected red fill and red text, then added the bottom-only red indicator.",
+          "result": "Matched on iPhone simulator, iPad simulator, Mac Catalyst, and Android physical device."
+        }
+      ],
+      "reopen_history": []
+    },
+    {
+      "id": "global_recommend_selected.center_tab.action",
+      "route_state": "global_recommend_selected",
+      "element": "center_tab",
+      "dimension": "tap requests a fresh recommendation",
+      "classification": "functional",
+      "source_ref": {
+        "kind": "runtime",
+        "value": "Tapping the center recommendation tab requests a fresh result"
+      },
+      "target_observation": "Android instrumentation invoked the RESULT callback and preserved selected semantics with 7/7 tests passing on SM-F968N API 36.",
+      "implementation_ref": "app/src/androidTest/java/com/nasfinder/whattoeat/ui/AppBottomBarTest.kt:82",
+      "fixture": "whattoeat-0.4.1-bottom-nav",
+      "fallback_capable": false,
+      "evidence": [
+        {
+          "id": "ev-recommend-action-1",
+          "type": "behavior_trace",
+          "path": ".parity/evidence/0.4.1/pairs/recommend-action.tsv",
+          "sha256": "1eb52d66c5b913f14ae84eecb4590d797b70cf60c4a376d97b8f06204f0f8785"
+        }
+      ],
+      "status": "matched",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-25",
+          "action": "Ran connected Compose instrumentation on the installed Android build.",
+          "result": "Fresh-result callback and selected semantics passed on the physical device."
+        }
+      ],
+      "reopen_history": []
+    }
+  ]
+}

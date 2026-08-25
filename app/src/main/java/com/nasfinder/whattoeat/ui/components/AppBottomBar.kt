@@ -27,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -59,6 +58,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import com.nasfinder.whattoeat.R
 import com.nasfinder.whattoeat.model.AppPage
 import com.nasfinder.whattoeat.theme.AccentRed
@@ -209,7 +209,6 @@ private fun RowScope.CenterRecommendTabItem(
     onClick: () -> Unit,
     accessibilityLabel: String? = null
 ) {
-    val tint = Ivory.copy(alpha = if (isSelected) 1f else 0.7f)
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(
@@ -246,7 +245,7 @@ private fun RowScope.CenterRecommendTabItem(
             Text(
                 text = label,
                 style = AppTypography.bottomLabel.copy(
-                    color = tint,
+                    color = Ivory.copy(alpha = 0.7f),
                     fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Medium
                 )
             )
@@ -265,14 +264,18 @@ private fun RowScope.CenterRecommendTabItem(
 
 @Composable
 private fun RecommendCircleIcon(
-    isSelected: Boolean,
+    isSelected: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val circleSize = 57.834.dp
     val strokeWidth = 1.8.dp
     val shadowRadius = 7.5.dp
     val shadowOffsetY = 4.5.dp
-    val diceSize = 36.dp
+    val bagSize = 38.25.dp
+    val resources = LocalContext.current.resources
+    val bagImage = remember(resources) {
+        ImageBitmap.imageResource(resources, R.drawable.img_lunch_bag_nav)
+    }
 
     Canvas(modifier = modifier.requiredSize(circleSize).testTag("bottom_recommendCircle")) {
         val w = size.width
@@ -290,21 +293,13 @@ private fun RecommendCircleIcon(
                     shadowRadius.toPx(),
                     0f,
                     shadowOffsetY.toPx(),
-                    (if (isSelected) AccentRed.copy(alpha = 0.28f) else CaramelDeep.copy(alpha = 0.2f)).toArgb()
+                    CaramelDeep.copy(alpha = 0.2f).toArgb()
                 )
             }
             canvas.nativeCanvas.drawCircle(center.x, center.y, radius - strokePx / 2f, shadowPaint)
         }
 
-        val gradientBrush = if (isSelected) {
-            Brush.linearGradient(
-                colors = listOf(Color(0xFFF53338), AccentRed),
-                start = Offset(0f, 0f),
-                end = Offset(w, h)
-            )
-        } else {
-            Brush.verticalGradient(colors = listOf(Color.White, Ivory))
-        }
+        val gradientBrush = Brush.verticalGradient(colors = listOf(Color.White, Ivory))
         drawCircle(
             brush = gradientBrush,
             radius = radius - strokePx / 2f,
@@ -312,35 +307,21 @@ private fun RecommendCircleIcon(
         )
 
         drawCircle(
-            color = if (isSelected) Color.White.copy(alpha = 0.88f) else CaramelDeep.copy(alpha = 0.35f),
+            color = CaramelDeep.copy(alpha = 0.35f),
             radius = radius - strokePx / 2f,
             center = center,
             style = Stroke(width = strokePx)
         )
 
-        val dicePx = diceSize.toPx()
-        val diceLeft = (w - dicePx) / 2f
-        val diceTop = (h - dicePx) / 2f - opticalLift
-        val cornerRad = dicePx * 0.22f
+        val bagPx = bagSize.toPx()
+        val bagLeft = (w - bagPx) / 2f
+        val bagTop = (h - bagPx) / 2f - opticalLift
 
-        drawRoundRect(
-            color = if (isSelected) Color.White else AccentRed,
-            topLeft = Offset(diceLeft + dicePx * 0.08f, diceTop + dicePx * 0.08f),
-            size = Size(dicePx * 0.84f, dicePx * 0.84f),
-            cornerRadius = CornerRadius(cornerRad, cornerRad)
+        drawImage(
+            image = bagImage,
+            dstOffset = IntOffset(bagLeft.roundToInt(), bagTop.roundToInt()),
+            dstSize = IntSize(bagPx.roundToInt(), bagPx.roundToInt())
         )
-
-        val dotRadius = dicePx * 0.07f
-        val dotColor = if (isSelected) AccentRed else Color.White
-        val dcx = diceLeft + dicePx * 0.5f
-        val dcy = diceTop + dicePx * 0.5f
-        val dOffset = dicePx * 0.20f
-
-        drawCircle(dotColor, radius = dotRadius, center = Offset(dcx, dcy))
-        drawCircle(dotColor, radius = dotRadius, center = Offset(dcx - dOffset, dcy - dOffset))
-        drawCircle(dotColor, radius = dotRadius, center = Offset(dcx + dOffset, dcy - dOffset))
-        drawCircle(dotColor, radius = dotRadius, center = Offset(dcx - dOffset, dcy + dOffset))
-        drawCircle(dotColor, radius = dotRadius, center = Offset(dcx + dOffset, dcy + dOffset))
     }
 }
 

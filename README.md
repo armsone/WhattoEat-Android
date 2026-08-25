@@ -9,7 +9,7 @@ Android 네이티브 앱. 구형 handoff와 이전 캡처는 역사 자료이며
 - Kotlin 2.1 + Jetpack Compose (AndroidX BOM), 외부 런타임 의존성 없음
 - Gradle 9.5.0 (wrapper 포함), AGP 9.3.0, compileSdk/targetSdk 37, minSdk 26
 - `applicationId` / `namespace`: `com.nasfinder.whattoeat`
-- versionName `0.4.0`, versionCode `340540`, `BuildConfig.BUILD_STAMP = "202608251140"`
+- versionName `0.4.1`, versionCode `341106`, `BuildConfig.BUILD_STAMP = "202608252106"`
 - 설정에서 공식 GitHub Releases의 허용 APK를 자동 또는 수동으로 확인·다운로드하고 검증 후 Android 설치자로 넘김
 
 ## 빌드
@@ -61,7 +61,7 @@ scripts/capture-matchup-catalog.sh --serial <ADB_SERIAL> --output <NEW_EMPTY_DIR
   Material 기본 `AlertDialog`/`Switch`/`Card` 대신 직접 그린 컴포넌트만 사용한다.
 - `ui/screens/` — 화면별 Compose 함수 (Home/Region/Result/Decision/History/Favorites/Settings).
 - `ui/RootApp.kt` — 하단바 고정 + 600dp 중앙 rail + 전역 다이얼로그 오버레이.
-- 하단바는 대표님의 최신 Android 전용 직접 지시에 따라 current iOS-derived anatomy 전체를 1.5배로 적용하며, 좌우·하단 여백은 각각 28dp다. SM-F968N 실제 화면 후속 지시로 중앙 원 diameter만 57.834dp, group lift -15.897dp로 조정했고 36dp 주사위는 그대로 유지했다. 선택된 `추천`은 다른 tab과 같은 진한 흰 label+빨간 indicator를 쓴다. 이 값은 일반 Android 예외나 시각 일치 판정이 아니다.
+- 하단바는 대표님의 최신 Android 전용 직접 지시에 따라 current iOS-derived anatomy 전체를 1.5배로 적용하며, 좌우·하단 여백은 각각 28dp다. 중앙 원 diameter 57.834dp와 group lift -15.897dp를 유지하고, 중앙 `추천` 탭은 기존 주사위 대신 Apple 수용 비율(30/45.36, 약 38.25dp)의 정품 풀컬러 `LunchBagNav` 비트맵 에셋을 aspect fit/unclipped로 렌더링한다. 중앙 원은 선택/비선택 모두 동일한 white→Ivory 그라데이션 배경과 neutral CaramelDeep 그림자(선택 시 붉은 배경/글로우 제거)를 사용하며, 라벨은 항상 Ivory 0.7 alpha를 유지하고 선택 표시는 하단 21×3.75dp 빨간 인디케이터 바로만 제공된다.
 - adaptive launcher icon은 108dp background, 약 60.1dp visible lunchbox foreground, 60dp monochrome safe-zone을 분리해 사용한다.
 - 폴더블 등 physical display가 여러 개인 기기에서는 캡처 스크립트가 현재 active physical display ID를 명시하고 manifest에 기록하며, 앱이 잠금 화면 뒤에 있으면 캡처를 중단한다.
 - 외부 사진 provider 선택/검색은 앱이 복제하지 않고 iOS와 같은 `https://nasfinder.com/api/restaurants` 서버 응답을 exact key로 decode한다. `photoURL`과 사진 메타데이터를 결과→결정→최근/찜까지 유지하며, nil 사진은 0.9초·1.8초 재조회에서 id별로 보강한다. 현재 12상태 fixture는 remote 사진이 아니라 결정론적 local fallback 검증이다.

@@ -11,12 +11,12 @@ android {
         applicationId = "com.nasfinder.whattoeat"
         minSdk = 26
         targetSdk = 37
-        versionCode = 340680
-        versionName = "0.4.0"
+        versionCode = 341106
+        versionName = "0.4.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BUILD_STAMP", "\"202608251400\"")
+        buildConfigField("String", "BUILD_STAMP", "\"202608252106\"")
         buildConfigField("String", "API_BASE_URL", "\"https://nasfinder.com\"")
     }
 
@@ -61,6 +61,7 @@ val copyHandoffAssets = tasks.register<Copy>("copyHandoffAssets") {
                 "AppIcon-1024" -> "ic_app_icon_1024"
                 "Wordmark" -> "img_wordmark"
                 "LunchHero" -> "img_lunch_hero"
+                "LunchBagNav" -> "img_lunch_bag_nav"
                 "PinWell" -> "img_pin_well"
                 "EmptyRecent" -> "img_empty_recent"
                 "EmptyFavorites" -> "img_empty_favorites"

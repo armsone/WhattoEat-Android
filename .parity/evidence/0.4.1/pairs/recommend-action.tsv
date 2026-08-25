@@ -1,0 +1,5 @@
+device	input	transition	side_effect	result
+SM-F968N API 36	tap contentDescription=추천 다시 고르기	AppPage.RESULT callback	fresh result request invoked	passed
+SM-F968N API 36	set page=RESULT	selected semantics applied	center circle keeps neutral surface; red bottom indicator shown	passed
+
+instrumentation	7 tests	0 failures	0 errors	2026-08-25T12:16:13Z

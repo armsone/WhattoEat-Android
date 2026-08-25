@@ -83,4 +83,20 @@ class AppBottomBarTest {
 
         assert(selected == AppPage.RESULT) { "Expected RESULT but was $selected" }
     }
+
+    @Test
+    fun recommendTabReflectsSelectionSemanticsWhenOnResultPage() {
+        composeTestRule.setContent {
+            WhattoEatTheme {
+                AppBottomBar(currentPage = AppPage.RESULT, onTabSelected = {})
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("추천 다시 고르기")
+            .assertIsSelected()
+            .assertHasClickAction()
+        composeTestRule.onNodeWithTag("bottom_recommendCircle", useUnmergedTree = true)
+            .assertWidthIsEqualTo(57.834.dp)
+            .assertHeightIsEqualTo(57.834.dp)
+    }
 }
