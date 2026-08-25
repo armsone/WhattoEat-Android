@@ -64,10 +64,13 @@ import com.nasfinder.whattoeat.ui.components.IconStorefront
 import com.nasfinder.whattoeat.ui.components.ReferenceIconWell
 import com.nasfinder.whattoeat.ui.components.ReferenceCard
 import com.nasfinder.whattoeat.viewmodel.MainViewModel
+import com.nasfinder.whattoeat.update.DirectUpdateManager
+import com.nasfinder.whattoeat.update.DirectUpdateSettings
 
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val updateManager = DirectUpdateManager.get(context)
     val locationPermissionStatus by viewModel.locationPermissionStatus.collectAsState()
     val selectedProvider by viewModel.selectedMapProvider.collectAsState()
     val notifyEnabled by viewModel.lunchNotifyEnabled.collectAsState()
@@ -298,6 +301,14 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     style = AppTypography.caption2,
                     modifier = Modifier.padding(top = 10.dp)
                 )
+            }
+
+            ReferenceCard(modifier = Modifier.fillMaxWidth().testTag("settings_updates")) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ReferenceIconWell(size = 30.dp) { IconInformation(tint = com.nasfinder.whattoeat.theme.AccentRed, modifier = Modifier.size(15.dp)) }
+                    Text(text = "앱 업데이트", style = AppTypography.sectionTitle)
+                }
+                DirectUpdateSettings(updateManager)
             }
 
         }

@@ -1,6 +1,6 @@
 # 오늘 뭐 먹지?? — Android
 
-현재 iOS `0.3.0` (`202608241540`, Git `730e95a`) 소스와 실제 simulator 캡처를 literal reference로 관리하는
+기준 iOS `0.3.0` (`202608241540`, Git `730e95a`) 소스와 실제 simulator 캡처를 literal reference로 관리하는
 Android 네이티브 앱. 구형 handoff와 이전 캡처는 역사 자료이며 최신 iOS 소스와 충돌할 때 정본이 아니다.
 앱 소유 UI/동작은 Material 기본 스타일로 재해석하지 않는다.
 
@@ -9,7 +9,8 @@ Android 네이티브 앱. 구형 handoff와 이전 캡처는 역사 자료이며
 - Kotlin 2.1 + Jetpack Compose (AndroidX BOM), 외부 런타임 의존성 없음
 - Gradle 9.5.0 (wrapper 포함), AGP 9.3.0, compileSdk/targetSdk 37, minSdk 26
 - `applicationId` / `namespace`: `com.nasfinder.whattoeat`
-- versionName `0.3.6`, versionCode `339619`, `BuildConfig.BUILD_STAMP = "202608242019"`
+- versionName `0.4.0`, versionCode `340540`, `BuildConfig.BUILD_STAMP = "202608251140"`
+- 설정에서 공식 GitHub Releases의 허용 APK를 자동 또는 수동으로 확인·다운로드하고 검증 후 Android 설치자로 넘김
 
 ## 빌드
 

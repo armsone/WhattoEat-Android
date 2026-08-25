@@ -97,3 +97,11 @@
 ## 남은 runtime blocker
 
 finish-work 승인으로 SM-F968N(Android 16/API 36)에 최신 APK의 데이터 유지 `adb install -r`, cold launch, 12 fixture, launcher, live remote 결과와 photo sheet 캡처까지 수행했다. 다만 current iOS와 Android는 서로 다른 물리 크기/OS chrome이고 remote Openverse pool은 요청별 shuffle이므로 이 증거만으로 broad pixel parity를 선언하지 않는다. 연결된 Android tablet/Google TV 대상이 없어 tablet rail·TV D-pad는 runtime 미검증이며 TalkBack 실제 읽기 순서, swipe 삭제 후 relaunch, 외부 지도 오류 분기도 별도 manual trace가 남았다. 따라서 상태는 **implemented from current iOS source; phone captures available; broad visual parity unverified**다.
+
+## 업데이트 채널 장부 — 2026-08-25
+
+| 대상 | 채널 | 구현 상태 | 검증 게이트 |
+|---|---|---|---|
+| iPhone·iPad | TestFlight | 직접 다운로드 intentional exception | TestFlight 관리 경로 유지 |
+| Mac Catalyst | GitHub DMG 직접 배포 | 자동 확인·기본 켬 자동 다운로드·수동 확인/다운로드·취소·재시도·SHA-256 검증·DMG 열기 `implemented_source_only` | Apple 빌드와 7상태 런타임 검증 대기 |
+| Android 휴대전화·태블릿·Google TV | GitHub APK 직접 배포 | 자동 확인·기본 켬 자동 다운로드·수동 확인/다운로드·DownloadManager 진행·취소·재시도·SHA-256/패키지/서명 검증·시스템 설치자 인계 `implemented_source_only` | Android 빌드와 7상태 런타임 검증 대기 |
