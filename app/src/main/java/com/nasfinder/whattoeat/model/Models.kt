@@ -44,6 +44,37 @@ enum class ReminderLeadTime(val label: String, val leadMinutes: Int) {
     }
 }
 
+enum class SituationFilter(
+    val displayName: String,
+    val description: String
+) {
+    ALL("전체", "모든 메뉴 추천"),
+    HEARTY_MEAL("든든한 식사", "국밥, 찌개, 탕, 고기 등 든든한 한 끼"),
+    LIGHT_MEAL("간단하게", "분식, 김밥, 국수 등 가벼운 식사"),
+    FAST_FOOD("패스트푸드", "버거, 피자, 치킨 등 간편식"),
+    DESSERT_CAFE("디저트·카페", "카페, 베이커리, 디저트"),
+    GATHERING_DINING("회식·모임", "고기구이, 전골, 회, 주점 등 모임 식사"),
+    LATE_NIGHT("야식", "치킨, 족발, 분식 등 늦은 밤 메뉴");
+
+    companion object {
+        fun fromKey(key: String?): SituationFilter {
+            if (key == null) return ALL
+            val trimmed = key.trim()
+            return entries.firstOrNull {
+                it.name.equals(trimmed, ignoreCase = true) ||
+                it.displayName == trimmed ||
+                (trimmed.equals("hearty", ignoreCase = true) && it == HEARTY_MEAL) ||
+                (trimmed.equals("light", ignoreCase = true) && it == LIGHT_MEAL) ||
+                (trimmed.equals("simple", ignoreCase = true) && it == LIGHT_MEAL) ||
+                (trimmed.equals("fastfood", ignoreCase = true) && it == FAST_FOOD) ||
+                (trimmed.equals("cafe", ignoreCase = true) && it == DESSERT_CAFE) ||
+                (trimmed.equals("gathering", ignoreCase = true) && it == GATHERING_DINING) ||
+                (trimmed.equals("night", ignoreCase = true) && it == LATE_NIGHT)
+            } ?: ALL
+        }
+    }
+}
+
 data class PhotoMatchEvidence(
     val exactNormalizedName: Boolean? = null,
     val addressMatch: Boolean? = null,

@@ -98,6 +98,100 @@ object MapProviderHelper {
         }
     }
 
+    fun buildMenuSearchQuery(menu: String, region: String? = null): String {
+        val cleanRegion = region?.trim()?.takeIf {
+            it.isNotEmpty() && it != "현 위치" && it != "지정 지역" && it != "지역 다시 선택"
+        }
+        val cleanMenu = menu.trim().ifEmpty { "맛집" }
+        return if (cleanRegion != null) "$cleanMenu $cleanRegion" else cleanMenu
+    }
+
+    fun buildMenuSearchUri(
+        provider: MapProvider,
+        menu: String,
+        region: String? = null,
+        lat: Double? = null,
+        lng: Double? = null
+    ): String? {
+        val query = buildMenuSearchQuery(menu, region)
+        val encodedQuery = try {
+            URLEncoder.encode(query, "UTF-8")
+        } catch (e: Exception) {
+            query
+        }
+        return when (provider) {
+            MapProvider.NAVER -> "nmap://search?query=$encodedQuery&appname=com.nasfinder.whattoeat"
+            MapProvider.KAKAO -> "kakaomap://search?q=$encodedQuery"
+            MapProvider.GOOGLE -> if (lat != null && lng != null) {
+                "geo:$lat,$lng?q=$encodedQuery"
+            } else {
+                "geo:0,0?q=$encodedQuery"
+            }
+            MapProvider.APPLE -> null
+        }
+    }
+
+    fun searchMapMenu(
+        context: Context,
+        provider: MapProvider,
+        menu: String,
+        region: String? = null,
+        lat: Double? = null,
+        lng: Double? = null
+    ): Boolean {
+        return when (provider) {
+            MapProvider.NAVER -> {
+                if (!isAppInstalled(context, MapProvider.NAVER.packageName)) return false
+                val uriStr = buildMenuSearchUri(provider, menu, region, lat, lng) ?: return false
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr)).apply {
+                    setPackage(MapProvider.NAVER.packageName)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    context.startActivity(intent)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            MapProvider.KAKAO -> {
+                if (!isAppInstalled(context, MapProvider.KAKAO.packageName)) return false
+                val uriStr = buildMenuSearchUri(provider, menu, region, lat, lng) ?: return false
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr)).apply {
+                    setPackage(MapProvider.KAKAO.packageName)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    context.startActivity(intent)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            MapProvider.GOOGLE -> {
+                if (!isAppInstalled(context, MapProvider.GOOGLE.packageName)) return false
+                val uriStr = buildMenuSearchUri(provider, menu, region, lat, lng) ?: return false
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr)).apply {
+                    setPackage(MapProvider.GOOGLE.packageName)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    context.startActivity(intent)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            MapProvider.APPLE -> {
+                // Apple Maps app is not available on Android; returns false for caller to handle dialog or web fallback
+                false
+            }
+        }
+    }
+
     fun openPlayStore(context: Context, provider: MapProvider) {
         val packageName = provider.packageName
         try {

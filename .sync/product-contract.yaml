@@ -1,0 +1,52 @@
+contract_version: 1.0.0
+product_name: "WhattoEat-Android (오늘 뭐 먹지??)"
+package_name: "com.nasfinder.whattoeat"
+
+features:
+  bottom_navigation:
+    description: "App-owned custom bottom bar with 1.5x scaled geometry, leather texture, raised center, and LunchBagNav asset."
+    invariants:
+      - "5 tabs: 홈(HOME), 지역(REGION), 추천(RESULT), 최근(HISTORY), 찜(FAVORITES)"
+      - "Raised center circle: diameter 57.834dp, group lift -15.897dp, LunchBagNav asset aspect fit"
+      - "White-to-Ivory gradient background on center circle for both selected and unselected states"
+      - "Selected tab indicator: red bar (21x3.75dp) at bottom center"
+      - "Height: 126dp, bottom margin: 28dp, horizontal insets: 28dp"
+
+  direct_updates:
+    description: "Official GitHub Release APK update checker and verified installer."
+    invariants:
+      - "No third-party store dependency; uses official GitHub release assets"
+      - "SHA-256 package verification before passing APK to Android PackageInstaller"
+      - "Preserves user data across in-place app updates"
+
+  situation_category_filter:
+    description: "Deterministic zero-recurring-cost situation and category filter for local recommendation pool."
+    invariants:
+      - "Optional 7 choices: 전체 (ALL), 든든한 식사 (HEARTY_MEAL), 간단하게 (LIGHT_MEAL), 패스트푸드 (FAST_FOOD), 디저트·카페 (DESSERT_CAFE), 회식·모임 (GATHERING_DINING), 야식 (LATE_NIGHT)"
+      - "One-tap recommendation remains default without requiring wizard completion"
+      - "Local filtering uses server-curated menus plus exact recognized menu names from restaurant name or final category; broad business categories alone are not situation evidence"
+      - "Deterministic matching with zero paid APIs and zero server-side algorithm dependencies"
+      - "Fallback safety: If a category produces no matching candidate, fallback to full menu pool without falsely claiming category filter was applied, and display clear user-facing notice"
+      - "Local persistence: Selected filter persists in SharedPreferences key 'situationFilter'"
+
+  no_paid_api_map_search:
+    description: "Zero-recurring-cost map search action for recommended menus using native app intents and existing missing-provider dialogs."
+    invariants:
+      - "Uses user's configured MapProvider (NAVER, KAKAO, GOOGLE, APPLE)"
+      - "Dispatches native search intent for query '[Menu] [Region]' or '[Menu]' without paid API keys"
+      - "Naver intent: nmap://search?query={query}&appname=com.nasfinder.whattoeat"
+      - "Kakao intent: kakaomap://search?q={query}"
+      - "Google intent: geo:0,0?q={query} or geo:{lat},{lng}?q={query}"
+      - "Apple fallback on Android: Shows the existing AppleMapFailureAlertDialog"
+      - "Missing app handling: Triggers MissingMapAlertDialog with Play Store install or alternate installed provider picker"
+      - "No in-app scraping, rating fetching, or review rendering"
+      - "Clear destination explanation prior to leaving the application"
+
+  indoor_location_fallback:
+    description: "Non-blocking indoor recovery using native GPS/Wi-Fi/cellular location fusion."
+    invariants:
+      - "A fresh native location request times out after 12 seconds"
+      - "On failure or timeout, OS-cached location is reused only when at most 5 minutes old"
+      - "Without usable cache, manual region selection is the primary recovery action and retry remains available"
+      - "Permission failures additionally provide the app-settings route"
+      - "No private Wi-Fi scan, new SDK, or persisted app-owned location cache"

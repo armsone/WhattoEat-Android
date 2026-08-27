@@ -7,6 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.nasfinder.whattoeat.data.ApiClient
 import com.nasfinder.whattoeat.data.ApiException
 import com.nasfinder.whattoeat.data.ChoiceStore
+import com.nasfinder.whattoeat.data.LocationFallbackPolicy
+import com.nasfinder.whattoeat.data.LocationFailureReason
+import com.nasfinder.whattoeat.data.LocationFetchResult
 import com.nasfinder.whattoeat.data.LocationResult
 import com.nasfinder.whattoeat.data.LocationService
 import com.nasfinder.whattoeat.data.MapProviderHelper
@@ -26,6 +29,7 @@ import com.nasfinder.whattoeat.model.RecommendationPhase
 import com.nasfinder.whattoeat.model.RegionUsage
 import com.nasfinder.whattoeat.model.ReminderLeadTime
 import com.nasfinder.whattoeat.model.Restaurant
+import com.nasfinder.whattoeat.model.SituationFilter
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,6 +79,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentLongitude = MutableStateFlow<Double?>(null)
     val currentLongitude: StateFlow<Double?> = _currentLongitude.asStateFlow()
 
+    private val _locationRecoveryMessage = MutableStateFlow("지역을 직접 지정해 주세요.")
+    val locationRecoveryMessage: StateFlow<String> = _locationRecoveryMessage.asStateFlow()
+
+    private val _locationFailureReason = MutableStateFlow<LocationFailureReason?>(null)
+    val locationFailureReason: StateFlow<LocationFailureReason?> = _locationFailureReason.asStateFlow()
+
     // Region screen state
     private val _regionStatusText = MutableStateFlow("현 위치를 다시 확인할 수 있어요")
     val regionStatusText: StateFlow<String> = _regionStatusText.asStateFlow()
@@ -97,6 +107,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _carouselRestaurants = MutableStateFlow<List<Restaurant>>(emptyList())
     val carouselRestaurants: StateFlow<List<Restaurant>> = _carouselRestaurants.asStateFlow()
+
+    // Situation Filter state
+    private val _selectedSituationFilter = MutableStateFlow(SituationFilter.ALL)
+    val selectedSituationFilter: StateFlow<SituationFilter> = _selectedSituationFilter.asStateFlow()
+
+    private val _isCategoryFallbackApplied = MutableStateFlow(false)
+    val isCategoryFallbackApplied: StateFlow<Boolean> = _isCategoryFallbackApplied.asStateFlow()
 
     private val _recommendationError = MutableStateFlow<String?>(null)
     val recommendationError: StateFlow<String?> = _recommendationError.asStateFlow()
@@ -177,6 +194,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _favoriteRecords.value = store.getFavoriteRecords()
         _frequentRegions.value = store.getTopFrequentRegions(3)
         _selectedMapProvider.value = store.mapProvider
+        _selectedSituationFilter.value = store.situationFilter
         _lunchNotifyEnabled.value = store.lunchNotifyEnabled
         _lunchHour.value = store.lunchHour
         _lunchMinute.value = store.lunchMinute
@@ -316,6 +334,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (locationService.hasLocationPermission()) {
                 executeAutoRecommendation()
             } else {
+                _locationFailureReason.value = LocationFailureReason.PERMISSION_DENIED
+                _locationRecoveryMessage.value = LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.PERMISSION_DENIED)
                 _recommendationPhase.value = RecommendationPhase.LOCATION_DENIED
             }
         }
@@ -447,27 +467,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     stopLoadingTimer()
                     requestLocationPermission?.invoke()
                 } else if (activeRequestToken == requestToken) {
+                    _locationFailureReason.value = LocationFailureReason.PERMISSION_DENIED
+                    _locationRecoveryMessage.value = LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.PERMISSION_DENIED)
                     _recommendationPhase.value = RecommendationPhase.LOCATION_DENIED
                     stopLoadingTimer()
                 }
                 return@launch
             }
 
-            val loc = locationService.getCurrentLocation()
-            if (loc == null) {
+            val detailedResult = locationService.getCurrentLocationDetailed()
+            if (detailedResult is LocationFetchResult.Failure) {
                 if (activeRequestToken == requestToken) {
-                    _recommendationPhase.value = RecommendationPhase.ERROR
-                    _recommendationError.value = "현재 위치를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
+                    _locationFailureReason.value = detailedResult.reason
+                    _locationRecoveryMessage.value = detailedResult.message
+                    _recommendationPhase.value = RecommendationPhase.LOCATION_DENIED
                     stopLoadingTimer()
                 }
                 return@launch
             }
 
+            val loc = (detailedResult as LocationFetchResult.Success).locationResult
+            _locationFailureReason.value = null
             _currentLatitude.value = loc.lat
             _currentLongitude.value = loc.lng
             _currentRegionName.value = loc.resolvedName
             executeFetchRestaurants(loc.lat, loc.lng, loc.resolvedName, requestToken)
         }
+    }
+
+    fun setSituationFilter(filter: SituationFilter) {
+        store.situationFilter = filter
+        _selectedSituationFilter.value = filter
+        _isCategoryFallbackApplied.value = false
     }
 
     private fun executeFetchRestaurants(
@@ -487,16 +518,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val response = ApiClient.fetchRestaurants(lat, lng)
                 if (activeRequestToken != requestToken) return@launch
 
-                // Filter out isOpenNow == false (keep true and null), pool up to 13
-                val pooled = com.nasfinder.whattoeat.data.RecommendationPool.buildPool(response.restaurants)
+                val currentFilter = _selectedSituationFilter.value
+                val filtered = com.nasfinder.whattoeat.data.RecommendationPool.buildPool(response.restaurants, currentFilter)
 
-                if (pooled.isEmpty()) {
-                    _recommendationPhase.value = RecommendationPhase.EMPTY
-                    stopLoadingTimer()
-                    return@launch
+                val pool: List<Restaurant>
+                if (filtered.isNotEmpty()) {
+                    _isCategoryFallbackApplied.value = false
+                    pool = filtered.shuffled()
+                } else {
+                    // Fallback to all-menu pool if filtered candidates are empty without falsely claiming category filter was applied
+                    val allPool = com.nasfinder.whattoeat.data.RecommendationPool.buildPool(response.restaurants, SituationFilter.ALL)
+                    if (allPool.isNotEmpty()) {
+                        _isCategoryFallbackApplied.value = (currentFilter != SituationFilter.ALL)
+                        pool = allPool.shuffled()
+                    } else {
+                        _isCategoryFallbackApplied.value = false
+                        _recommendationPhase.value = RecommendationPhase.EMPTY
+                        stopLoadingTimer()
+                        return@launch
+                    }
                 }
 
-                val pool = pooled.shuffled()
                 val main = pool.first()
                 val remaining = if (pool.size > 1) pool.subList(1, pool.size) else emptyList()
 
@@ -586,13 +628,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _isResolvingLocation.value = true
             _regionStatusText.value = "현 위치 확인 중…"
             if (!locationService.hasLocationPermission()) {
-                _regionStatusText.value = "위치 권한이 꺼져 있어요"
+                _regionStatusText.value = LocationFallbackPolicy.resolveStatusText(LocationFailureReason.PERMISSION_DENIED)
                 _isResolvingLocation.value = false
                 return@launch
             }
 
-            val loc = locationService.getCurrentLocation()
-            if (loc != null) {
+            if (!locationService.isLocationEnabled()) {
+                val lastKnown = locationService.getLastKnownLocation()
+                if (lastKnown != null && LocationFallbackPolicy.isValidLocation(lastKnown)) {
+                    val resolvedName = locationService.resolveAddress(lastKnown.latitude, lastKnown.longitude)
+                    _regionStatusText.value = if (resolvedName.isNotEmpty() && resolvedName != "현 위치") {
+                        "현 위치: $resolvedName"
+                    } else {
+                        "현 위치를 확인했어요"
+                    }
+                    val nearby = locationService.resolveNearbyRegions(lastKnown.latitude, lastKnown.longitude)
+                    _nearbyRegions.value = nearby
+                    _isResolvingLocation.value = false
+                    return@launch
+                }
+                _regionStatusText.value = LocationFallbackPolicy.resolveStatusText(LocationFailureReason.LOCATION_SERVICES_DISABLED)
+                _isResolvingLocation.value = false
+                return@launch
+            }
+
+            val detailedResult = locationService.getCurrentLocationDetailed()
+            if (detailedResult is LocationFetchResult.Success) {
+                val loc = detailedResult.locationResult
                 _regionStatusText.value = if (loc.resolvedName.isNotEmpty() && loc.resolvedName != "현 위치") {
                     "현 위치: ${loc.resolvedName}"
                 } else {
@@ -601,7 +663,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val nearby = locationService.resolveNearbyRegions(loc.lat, loc.lng)
                 _nearbyRegions.value = nearby
             } else {
-                _regionStatusText.value = "위치 권한이 꺼져 있어요"
+                val failure = detailedResult as LocationFetchResult.Failure
+                _regionStatusText.value = LocationFallbackPolicy.resolveStatusText(failure.reason)
             }
             _isResolvingLocation.value = false
         }
@@ -674,8 +737,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         openMapForRestaurant(context, restaurant)
     }
 
+    private var pendingMapSearchMenu: String? = null
+    private var pendingMapSearchRegion: String? = null
+
+    fun searchMapForMenu(context: Context, menu: String, region: String? = null) {
+        val provider = _selectedMapProvider.value
+        val lat = _currentLatitude.value
+        val lng = _currentLongitude.value
+        pendingMapSearchMenu = menu
+        pendingMapSearchRegion = region
+        val success = MapProviderHelper.searchMapMenu(context, provider, menu, region, lat, lng)
+        if (success) {
+            pendingMapSearchMenu = null
+            pendingMapSearchRegion = null
+        } else {
+            _missingMapProvider.value = provider
+            _showMissingMapAlert.value = true
+        }
+    }
+
     fun openMapForRestaurant(context: Context, restaurant: Restaurant) {
         val provider = _selectedMapProvider.value
+        pendingMapSearchMenu = null
+        pendingMapSearchRegion = null
         val success = MapProviderHelper.openMap(context, provider, restaurant)
         if (!success) {
             _missingMapProvider.value = provider
@@ -686,6 +770,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun dismissMissingMapAlert() {
         _showMissingMapAlert.value = false
         _missingMapProvider.value = null
+        pendingMapSearchMenu = null
+        pendingMapSearchRegion = null
     }
 
     fun openOtherMapPicker() {
@@ -695,6 +781,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissOtherMapPicker() {
         _showOtherMapPicker.value = false
+        pendingMapSearchMenu = null
+        pendingMapSearchRegion = null
     }
 
     fun installMissingMap(context: Context) {
@@ -707,8 +795,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _showMissingMapAlert.value = false
         _showOtherMapPicker.value = false
         setMapProvider(newProvider)
-        _currentDecision.value?.restaurant?.let {
-            MapProviderHelper.openMap(context, newProvider, it)
+        val pendingMenu = pendingMapSearchMenu
+        if (pendingMenu != null) {
+            val pendingRegion = pendingMapSearchRegion
+            pendingMapSearchMenu = null
+            pendingMapSearchRegion = null
+            val success = MapProviderHelper.searchMapMenu(
+                context,
+                newProvider,
+                pendingMenu,
+                pendingRegion,
+                _currentLatitude.value,
+                _currentLongitude.value
+            )
+            if (!success) {
+                pendingMapSearchMenu = pendingMenu
+                pendingMapSearchRegion = pendingRegion
+                _missingMapProvider.value = newProvider
+                _showMissingMapAlert.value = true
+            }
+        } else {
+            _currentDecision.value?.restaurant?.let {
+                MapProviderHelper.openMap(context, newProvider, it)
+            }
         }
     }
 

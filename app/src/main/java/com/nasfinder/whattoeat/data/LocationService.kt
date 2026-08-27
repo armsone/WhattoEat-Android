@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import kotlin.coroutines.resume
 
@@ -45,80 +46,180 @@ class LocationService(private val context: Context) {
         return fine || coarse
     }
 
-    @SuppressLint("MissingPermission")
-    suspend fun getCurrentLocation(): LocationResult? = withContext(Dispatchers.IO) {
-        if (!hasLocationPermission()) return@withContext null
+    fun isFineLocationGranted(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
 
-        val location = suspendCancellableCoroutine<Location?> { cont ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val cancellationSignal = CancellationSignal()
-                cont.invokeOnCancellation { cancellationSignal.cancel() }
+    fun isLocationEnabled(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                locationManager.isLocationEnabled
+            } catch (e: Exception) {
+                false
+            }
+        } else {
+            try {
+                locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun getLastKnownLocation(): Location? {
+        if (!hasLocationPermission()) return null
+        val candidates = mutableListOf<Location>()
+        val enabledProviders = try {
+            locationManager.getProviders(true)
+        } catch (e: Exception) {
+            emptyList<String>()
+        }
+        for (provider in enabledProviders) {
+            try {
+                locationManager.getLastKnownLocation(provider)?.let { candidates.add(it) }
+            } catch (e: Exception) {
+                // ignore provider error
+            }
+        }
+        val standardProviders = listOf(
+            "fused",
+            LocationManager.NETWORK_PROVIDER,
+            LocationManager.GPS_PROVIDER,
+            LocationManager.PASSIVE_PROVIDER
+        )
+        for (p in standardProviders) {
+            if (!enabledProviders.contains(p)) {
                 try {
-                    val provider = when {
-                        locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
-                        locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
-                        else -> LocationManager.PASSIVE_PROVIDER
-                    }
-                    locationManager.getCurrentLocation(
-                        provider,
-                        cancellationSignal,
-                        context.mainExecutor
-                    ) { loc ->
-                        if (cont.isActive) cont.resume(loc)
-                    }
+                    locationManager.getLastKnownLocation(p)?.let { candidates.add(it) }
                 } catch (e: Exception) {
-                    if (cont.isActive) cont.resume(null)
+                    // ignore
                 }
-            } else {
-                // Fallback for older API levels
-                var bestLocation: Location? = null
-                val providers = locationManager.getProviders(true)
-                for (p in providers) {
-                    val l = try { locationManager.getLastKnownLocation(p) } catch (e: Exception) { null }
-                    if (l != null && (bestLocation == null || l.accuracy < bestLocation.accuracy)) {
-                        bestLocation = l
+            }
+        }
+        return LocationFallbackPolicy.selectBestLocation(candidates)
+    }
+
+    @SuppressLint("MissingPermission")
+    suspend fun getCurrentLocationDetailed(): LocationFetchResult = withContext(Dispatchers.IO) {
+        if (!hasLocationPermission()) {
+            return@withContext LocationFetchResult.Failure(
+                LocationFailureReason.PERMISSION_DENIED,
+                LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.PERMISSION_DENIED)
+            )
+        }
+
+        if (!isLocationEnabled()) {
+            val lastKnown = getLastKnownLocation()
+            if (lastKnown != null && LocationFallbackPolicy.isValidLocation(lastKnown)) {
+                val name = resolveAddress(lastKnown.latitude, lastKnown.longitude)
+                return@withContext LocationFetchResult.Success(
+                    LocationResult(lastKnown.latitude, lastKnown.longitude, name)
+                )
+            }
+            return@withContext LocationFetchResult.Failure(
+                LocationFailureReason.LOCATION_SERVICES_DISABLED,
+                LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.LOCATION_SERVICES_DISABLED)
+            )
+        }
+
+        val enabledProviders = try {
+            locationManager.getProviders(true)
+        } catch (e: Exception) {
+            emptyList<String>()
+        }
+
+        val isFine = isFineLocationGranted()
+        val prioritizedProviders = LocationFallbackPolicy.getPrioritizedProviders(enabledProviders, isFine)
+
+        val freshLocation = withTimeoutOrNull(LocationFallbackPolicy.LOCATION_REQUEST_TIMEOUT_MILLIS) {
+            requestFreshLocation(prioritizedProviders)
+        }
+
+        val chosenLocation = if (freshLocation != null && LocationFallbackPolicy.isValidLocation(freshLocation)) {
+            freshLocation
+        } else {
+            getLastKnownLocation()
+        }
+
+        if (chosenLocation == null || !LocationFallbackPolicy.isValidLocation(chosenLocation)) {
+            return@withContext LocationFetchResult.Failure(
+                LocationFailureReason.TIMEOUT_OR_UNAVAILABLE,
+                LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.TIMEOUT_OR_UNAVAILABLE)
+            )
+        }
+
+        val resolvedName = resolveAddress(chosenLocation.latitude, chosenLocation.longitude)
+        LocationFetchResult.Success(
+            LocationResult(chosenLocation.latitude, chosenLocation.longitude, resolvedName)
+        )
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun requestFreshLocation(providers: List<String>): Location? {
+        if (providers.isEmpty()) return null
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            for (provider in providers) {
+                val loc = suspendCancellableCoroutine<Location?> { cont ->
+                    val cancellationSignal = CancellationSignal()
+                    cont.invokeOnCancellation { cancellationSignal.cancel() }
+                    try {
+                        locationManager.getCurrentLocation(
+                            provider,
+                            cancellationSignal,
+                            context.mainExecutor
+                        ) { result ->
+                            if (cont.isActive) cont.resume(result)
+                        }
+                    } catch (e: Exception) {
+                        if (cont.isActive) cont.resume(null)
                     }
                 }
-                if (bestLocation != null) {
-                    cont.resume(bestLocation)
-                } else {
+                if (loc != null && LocationFallbackPolicy.isValidLocation(loc)) {
+                    return loc
+                }
+            }
+            return null
+        } else {
+            for (provider in providers) {
+                val loc = suspendCancellableCoroutine<Location?> { cont ->
                     val listener = object : LocationListener {
-                        override fun onLocationChanged(loc: Location) {
+                        override fun onLocationChanged(l: Location) {
                             try { locationManager.removeUpdates(this) } catch (e: Exception) {}
-                            if (cont.isActive) cont.resume(loc)
+                            if (cont.isActive) cont.resume(l)
                         }
-                        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-                        override fun onProviderEnabled(provider: String) {}
-                        override fun onProviderDisabled(provider: String) {}
+                        override fun onStatusChanged(p: String?, status: Int, extras: Bundle?) {}
+                        override fun onProviderEnabled(p: String) {}
+                        override fun onProviderDisabled(p: String) {}
                     }
                     cont.invokeOnCancellation {
                         try { locationManager.removeUpdates(listener) } catch (e: Exception) {}
                     }
                     try {
-                        locationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, listener, null)
+                        locationManager.requestSingleUpdate(provider, listener, null)
                     } catch (e: Exception) {
                         if (cont.isActive) cont.resume(null)
                     }
                 }
+                if (loc != null && LocationFallbackPolicy.isValidLocation(loc)) {
+                    return loc
+                }
             }
+            return null
         }
+    }
 
-        if (location == null) {
-            // Last known fallback
-            val lastKnown = try {
-                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                    ?: locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
-            } catch (e: Exception) {
-                null
-            } ?: return@withContext null
-
-            val name = resolveAddress(lastKnown.latitude, lastKnown.longitude)
-            return@withContext LocationResult(lastKnown.latitude, lastKnown.longitude, name)
+    @SuppressLint("MissingPermission")
+    suspend fun getCurrentLocation(): LocationResult? {
+        return when (val result = getCurrentLocationDetailed()) {
+            is LocationFetchResult.Success -> result.locationResult
+            is LocationFetchResult.Failure -> null
         }
-
-        val resolved = resolveAddress(location.latitude, location.longitude)
-        LocationResult(location.latitude, location.longitude, resolved)
     }
 
     suspend fun resolveAddress(lat: Double, lng: Double): String = withContext(Dispatchers.IO) {

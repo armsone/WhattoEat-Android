@@ -8,6 +8,7 @@
 /app/build
 /captures
 /tmp
+/.codex-release
 *.jks
 *.keystore
 *.properties.local

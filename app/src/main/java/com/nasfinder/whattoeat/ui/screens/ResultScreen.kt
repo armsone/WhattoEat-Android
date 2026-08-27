@@ -52,6 +52,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import com.nasfinder.whattoeat.data.LocationFailureReason
 import com.nasfinder.whattoeat.data.MenuPolicy
 import com.nasfinder.whattoeat.data.ImageLoader
 import com.nasfinder.whattoeat.model.AppPage
@@ -83,10 +87,14 @@ import com.nasfinder.whattoeat.ui.components.IconStar
 import com.nasfinder.whattoeat.ui.components.IconStorefront
 import com.nasfinder.whattoeat.ui.components.IconTakeout
 import com.nasfinder.whattoeat.ui.components.ReferenceIconWell
+import com.nasfinder.whattoeat.ui.components.PrimaryButton
 import com.nasfinder.whattoeat.ui.components.SecondaryButton
 import com.nasfinder.whattoeat.ui.components.openPhoneDialer
 import com.nasfinder.whattoeat.viewmodel.MainViewModel
 import kotlinx.coroutines.isActive
+import androidx.compose.foundation.horizontalScroll
+import com.nasfinder.whattoeat.model.MapProvider
+import com.nasfinder.whattoeat.model.SituationFilter
 
 @Composable
 fun ResultScreen(viewModel: MainViewModel) {
@@ -98,6 +106,9 @@ fun ResultScreen(viewModel: MainViewModel) {
     val loadingSeconds by viewModel.loadingSeconds.collectAsState()
     val favoriteRecords by viewModel.favoriteRecords.collectAsState()
     val favoriteIds = favoriteRecords.map { it.restaurantId }.toSet()
+    val selectedFilter by viewModel.selectedSituationFilter.collectAsState()
+    val isCategoryFallbackApplied by viewModel.isCategoryFallbackApplied.collectAsState()
+    val mapProvider by viewModel.selectedMapProvider.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         CompactHeader(
@@ -111,12 +122,28 @@ fun ResultScreen(viewModel: MainViewModel) {
                 .fillMaxWidth()
                 .testTag("result_regionBar")
                 .clickable(role = Role.Button) { viewModel.navigateTo(AppPage.REGION) }
-                .padding(horizontal = 28.dp, vertical = 10.dp),
+                .padding(horizontal = 28.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(text = regionName.ifEmpty { "지역 다시 선택" }, style = AppTypography.rowTitle)
             IconChevronDown(tint = CharcoalText, modifier = Modifier.size(14.dp))
+        }
+
+        ResultSituationFilterBar(
+            selectedFilter = selectedFilter,
+            onSelectFilter = {
+                viewModel.setSituationFilter(it)
+                viewModel.retryRecommendation()
+            },
+            modifier = Modifier.padding(horizontal = 28.dp, vertical = 2.dp)
+        )
+
+        if (isCategoryFallbackApplied && phase == RecommendationPhase.SUCCESS) {
+            CategoryFallbackNotice(
+                filter = selectedFilter,
+                modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp)
+            )
         }
 
         when (phase) {
@@ -125,13 +152,19 @@ fun ResultScreen(viewModel: MainViewModel) {
             RecommendationPhase.LOCATION_DENIED -> LocationDeniedState(viewModel)
             RecommendationPhase.EMPTY -> EmptyState()
             RecommendationPhase.SUCCESS -> if (main != null) {
-                ResultsState(main = main!!, carousel = carousel, favoriteIds = favoriteIds, viewModel = viewModel)
+                ResultsState(
+                    main = main!!,
+                    carousel = carousel,
+                    favoriteIds = favoriteIds,
+                    regionName = regionName,
+                    mapProvider = mapProvider,
+                    viewModel = viewModel
+                )
             }
             RecommendationPhase.IDLE -> {}
         }
     }
 }
-
 @Composable
 internal fun MealShuffleAnimation(modifier: Modifier = Modifier, freezeForCatalog: Boolean = false) {
     var elapsedNanos by remember { mutableLongStateOf(0L) }
@@ -268,14 +301,33 @@ private fun ErrorState(message: String, viewModel: MainViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "문제가 생겼어요", style = AppTypography.sectionTitle)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = message, style = AppTypography.supporting, modifier = Modifier.testTag("result_errorText"))
+        Text(
+            text = message,
+            style = AppTypography.supporting,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.testTag("result_errorText")
+        )
         Spacer(modifier = Modifier.height(20.dp))
-        SecondaryButton(text = "다시 시도", onClick = { viewModel.retryRecommendation() }, modifier = Modifier.testTag("result_retryButton"))
+        PrimaryButton(
+            text = "지역 직접 선택",
+            onClick = { viewModel.navigateTo(AppPage.REGION) },
+            modifier = Modifier.testTag("result_specifyRegionButton")
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        SecondaryButton(
+            text = "다시 시도",
+            onClick = { viewModel.retryRecommendation() },
+            modifier = Modifier.testTag("result_retryButton")
+        )
     }
 }
 
 @Composable
 private fun LocationDeniedState(viewModel: MainViewModel) {
+    val context = LocalContext.current
+    val recoveryMessage by viewModel.locationRecoveryMessage.collectAsState()
+    val failureReason by viewModel.locationFailureReason.collectAsState()
+
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -287,9 +339,53 @@ private fun LocationDeniedState(viewModel: MainViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "위치를 찾을 수 없어요", style = AppTypography.sectionTitle)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "지역을 직접 지정해 주세요.", style = AppTypography.supporting)
+        Text(
+            text = recoveryMessage,
+            style = AppTypography.supporting,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.testTag("result_locationDeniedText")
+        )
         Spacer(modifier = Modifier.height(20.dp))
-        SecondaryButton(text = "지역 지정", onClick = { viewModel.navigateTo(AppPage.REGION) }, modifier = Modifier.testTag("result_specifyRegionButton"))
+        PrimaryButton(
+            text = "지역 직접 선택",
+            onClick = { viewModel.navigateTo(AppPage.REGION) },
+            modifier = Modifier.testTag("result_specifyRegionButton")
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        if (failureReason == LocationFailureReason.PERMISSION_DENIED || failureReason == LocationFailureReason.LOCATION_SERVICES_DISABLED) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SecondaryButton(
+                    text = "다시 시도",
+                    onClick = { viewModel.retryRecommendation() },
+                    modifier = Modifier.weight(1f).testTag("result_retryButton")
+                )
+                SecondaryButton(
+                    text = "설정 열기",
+                    onClick = { openAppSettings(context) },
+                    modifier = Modifier.weight(1f).testTag("result_settingsButton")
+                )
+            }
+        } else {
+            SecondaryButton(
+                text = "다시 시도",
+                onClick = { viewModel.retryRecommendation() },
+                modifier = Modifier.testTag("result_retryButton")
+            )
+        }
+    }
+}
+
+private fun openAppSettings(context: android.content.Context) {
+    try {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        // ignore
     }
 }
 
@@ -311,7 +407,15 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun ResultsState(main: Restaurant, carousel: List<Restaurant>, favoriteIds: Set<String>, viewModel: MainViewModel) {
+private fun ResultsState(
+    main: Restaurant,
+    carousel: List<Restaurant>,
+    favoriteIds: Set<String>,
+    regionName: String,
+    mapProvider: MapProvider,
+    viewModel: MainViewModel
+) {
+    val context = LocalContext.current
     val restaurants = listOf(main) + carousel
     val fallbackTypes = remember(restaurants) {
         val used = mutableSetOf<ImageLoader.FallbackType>()
@@ -326,6 +430,7 @@ private fun ResultsState(main: Restaurant, carousel: List<Restaurant>, favoriteI
             restaurant.id to type
         }
     }
+    val menu = MenuPolicy.resolveMenu(main)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -334,8 +439,19 @@ private fun ResultsState(main: Restaurant, carousel: List<Restaurant>, favoriteI
     ) {
         MainResultCard(main, favoriteIds.contains(main.id), fallbackTypes[main.id], viewModel)
 
+        Spacer(modifier = Modifier.height(10.dp))
+
+        MapSearchActionCard(
+            menu = menu,
+            regionName = regionName,
+            mapProvider = mapProvider,
+            onSearchMap = {
+                viewModel.searchMapForMenu(context, menu, regionName)
+            }
+        )
+
         if (carousel.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(34.dp))
+            Spacer(modifier = Modifier.height(28.dp))
             Text(
                 text = "함께 보면 좋은 맛집",
                 style = AppTypography.headline
@@ -598,5 +714,127 @@ private fun SecondaryGridCard(
                 IconPhone(tint = CharcoalText, modifier = Modifier.size(14.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun ResultSituationFilterBar(
+    selectedFilter: SituationFilter,
+    onSelectFilter: (SituationFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(scrollState)
+            .testTag("result_situationFilterRow"),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SituationFilter.entries.forEach { filter ->
+            val isSelected = filter == selectedFilter
+            val shape = RoundedCornerShape(12.dp)
+            Box(
+                modifier = Modifier
+                    .testTag("result_situationFilter_${filter.name.lowercase()}")
+                    .shadow(
+                        elevation = if (isSelected) 2.dp else 0.dp,
+                        shape = shape,
+                        ambientColor = CaramelDeep.copy(alpha = 0.08f),
+                        spotColor = CaramelDeep.copy(alpha = 0.08f)
+                    )
+                    .background(if (isSelected) SelectionMint else Ivory, shape)
+                    .border(
+                        width = 1.dp,
+                        color = if (isSelected) AccentRed.copy(alpha = 0.65f) else CanvasLineAlpha70,
+                        shape = shape
+                    )
+                    .clip(shape)
+                    .clickable(role = Role.Button) { onSelectFilter(filter) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = filter.displayName,
+                    style = AppTypography.caption.copy(
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) AccentRed else CharcoalText
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryFallbackNotice(
+    filter: SituationFilter,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("result_categoryFallbackNotice")
+            .background(SelectionMint.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+            .border(1.dp, CanvasLineAlpha70, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ReferenceIconWell(size = 24.dp) {
+            IconInformation(tint = AccentRed, modifier = Modifier.size(12.dp))
+        }
+        Text(
+            text = "선택한 ‘${filter.displayName}’ 조건에 맞는 식당이 없어 전체 메뉴에서 추천했어요.",
+            style = AppTypography.caption2.copy(color = CharcoalText)
+        )
+    }
+}
+
+@Composable
+private fun MapSearchActionCard(
+    menu: String,
+    regionName: String,
+    mapProvider: MapProvider,
+    onSearchMap: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(14.dp)
+    val queryText = if (regionName.isNotEmpty() && regionName != "현 위치" && regionName != "지정 지역") {
+        "$regionName ‘$menu’"
+    } else {
+        "‘$menu’"
+    }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .testTag("result_mapSearchCta")
+            .shadow(elevation = 2.dp, shape = shape, ambientColor = CaramelDeep.copy(alpha = 0.08f), spotColor = CaramelDeep.copy(alpha = 0.08f))
+            .background(Ivory, shape)
+            .border(1.dp, CanvasLineAlpha70, shape)
+            .clip(shape)
+            .clickable(role = Role.Button, onClick = onSearchMap)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        ReferenceIconWell(size = 32.dp) {
+            IconSearch(tint = AccentRed, modifier = Modifier.size(15.dp))
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "${mapProvider.shortName} 지도에서 $queryText 맛집 검색",
+                style = AppTypography.caption.copy(fontWeight = FontWeight.SemiBold, color = CharcoalText),
+                maxLines = 1
+            )
+            Text(
+                text = "${mapProvider.displayName} 지도 앱으로 이동하여 주변 검색 결과를 확인해요.",
+                style = AppTypography.caption2.copy(color = CharcoalSoft),
+                maxLines = 1
+            )
+        }
+        IconChevronRight(tint = CharcoalText, modifier = Modifier.size(12.dp))
     }
 }

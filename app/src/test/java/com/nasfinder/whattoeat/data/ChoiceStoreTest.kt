@@ -3,6 +3,7 @@ package com.nasfinder.whattoeat.data
 import androidx.test.core.app.ApplicationProvider
 import com.nasfinder.whattoeat.model.ChoiceRecord
 import com.nasfinder.whattoeat.model.FavoriteRecord
+import com.nasfinder.whattoeat.model.SituationFilter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -89,6 +90,15 @@ class ChoiceStoreTest {
         val reopened = ChoiceStore(ApplicationProvider.getApplicationContext())
         assertEquals(37.5665, reopened.manualLatitude!!, 0.0001)
         assertEquals(126.9780, reopened.manualLongitude!!, 0.0001)
+    }
+
+    @Test
+    fun `situation filter persists across store instances`() {
+        store.situationFilter = SituationFilter.DESSERT_CAFE
+
+        val reopened = ChoiceStore(ApplicationProvider.getApplicationContext())
+
+        assertEquals(SituationFilter.DESSERT_CAFE, reopened.situationFilter)
     }
 
     @Test

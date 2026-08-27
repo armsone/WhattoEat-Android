@@ -103,6 +103,195 @@
         }
       ],
       "reopen_history": []
+    },
+    {
+      "id": "home_situation_filter.chips.rendering",
+      "route_state": "home",
+      "element": "situation_filter_chips",
+      "dimension": "situation chip row rendering and selection state",
+      "classification": "visual",
+      "source_ref": {
+        "kind": "spec",
+        "value": "Optional situation/category filter control with 7 choices; Android also exposes a Home shortcut while Apple currently exposes it on recommendation results",
+        "location": "/Users/armsone/git/WhattoEat /.sync/product-contract.yaml"
+      },
+      "target_observation": "Android HomeScreen source contains the seven-choice shortcut; no corresponding Apple home control or post-change capture pair was observed.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/ui/screens/HomeScreen.kt",
+      "fixture": "whattoeat-0.4.1-situation-filter",
+      "fallback_capable": true,
+      "evidence": [],
+      "status": "implemented_source_only",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-26",
+          "action": "Added SituationFilter chips with SelectionMint and Ivory styling and local persistence.",
+          "result": "Source implemented; physical device capture unverified."
+        }
+      ],
+      "reopen_history": []
+    },
+    {
+      "id": "result_situation_filter.chips.rendering",
+      "route_state": "result",
+      "element": "situation_filter_chips",
+      "dimension": "seven choices and selected rendering",
+      "classification": "visual",
+      "source_ref": {
+        "kind": "source",
+        "value": "Apple recommendation results render seven horizontally scrollable situation buttons with selected styling.",
+        "location": "WhattoEat/ContentView.swift:1888"
+      },
+      "target_observation": "Android ResultScreen source renders the same seven labels and a selected state; paired post-change captures are absent.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/ui/screens/ResultScreen.kt:652",
+      "fixture": "whattoeat-situation-filter-v1",
+      "fallback_capable": false,
+      "evidence": [],
+      "status": "implemented_source_only",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-26",
+          "action": "Compared Apple and Android result-filter source implementations.",
+          "result": "Labels and selection behavior exist in source; runtime rendering remains unverified."
+        }
+      ],
+      "reopen_history": []
+    },
+    {
+      "id": "result_situation_filter.fallback_notice",
+      "route_state": "result",
+      "element": "situation_filter_fallback_notice",
+      "dimension": "truthful empty-match disclosure",
+      "classification": "visual",
+      "source_ref": {
+        "kind": "source",
+        "value": "Apple shows a notice before falling back to the full restaurant list when the selected situation has no verified menu match.",
+        "location": "WhattoEat/ContentView.swift:1848"
+      },
+      "target_observation": "Android ResultScreen source contains an equivalent disclosure with different wording; paired post-change captures and exact text review are absent.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/ui/screens/ResultScreen.kt:704",
+      "fixture": "whattoeat-situation-filter-empty-v1",
+      "fallback_capable": true,
+      "evidence": [],
+      "status": "implemented_source_only",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-26",
+          "action": "Compared the source-level empty-match disclosure and fallback path.",
+          "result": "Both disclose fallback, but exact rendered text and fallback fixtures remain open."
+        }
+      ],
+      "reopen_history": []
+    },
+    {
+      "id": "recommendation_pool.situation_filtering.action",
+      "route_state": "result",
+      "element": "situation_filtering",
+      "dimension": "deterministic local category filtering and fallback",
+      "classification": "functional",
+      "source_ref": {
+        "kind": "source",
+        "value": "Apple and Android filter only server-curated or exactly recognized menu evidence and fall back to the eligible full pool with disclosure.",
+        "location": "WhattoEat/MenuPolicy.swift:66"
+      },
+      "target_observation": "Implemented SituationFilterPolicy and RecommendationPool.buildPool with empty category fallback notice; instrumentation unverified.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/data/MenuPolicy.kt",
+      "fixture": "whattoeat-0.4.1-situation-filter",
+      "fallback_capable": true,
+      "evidence": [],
+      "status": "implemented_source_only",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-26",
+          "action": "Added pure category filtering and ViewModel fallback logic.",
+          "result": "Source implemented and unit tested; device trace unverified."
+        }
+      ],
+      "reopen_history": []
+    },
+    {
+      "id": "result_map_search.recommended_menu.action",
+      "route_state": "result",
+      "element": "map_search_button",
+      "dimension": "no-paid-API provider search intent dispatch",
+      "classification": "functional",
+      "source_ref": {
+        "kind": "source",
+        "value": "Dispatches a percent-encoded menu then region query using the configured map provider, with platform-native missing-provider handling.",
+        "location": "WhattoEat/ContentView.swift:2775"
+      },
+      "target_observation": "Implemented MapProviderHelper.searchMapMenu with Naver/Kakao/Google native intents and Apple/missing-app fallbacks; device trace unverified.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/data/MapProviderHelper.kt",
+      "fixture": "whattoeat-0.4.1-map-search",
+      "fallback_capable": true,
+      "evidence": [],
+      "status": "implemented_source_only",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-26",
+          "action": "Added searchMapMenu with provider query encoding and MissingMapAlertDialog integration.",
+          "result": "Source implemented and unit tested; device trace unverified."
+        }
+      ],
+      "reopen_history": []
+    },
+    {
+      "id": "result_map_search.cta.rendering",
+      "route_state": "result",
+      "element": "map_search_cta",
+      "dimension": "destination explanation and placement",
+      "classification": "visual",
+      "source_ref": {
+        "kind": "source",
+        "value": "Apple DecisionView shows a menu-search action naming the menu, provider, and region before leaving the app.",
+        "location": "WhattoEat/ContentView.swift:2577"
+      },
+      "target_observation": "Android ResultScreen source shows the explanation on recommendation results rather than Apple DecisionView; no paired post-change captures exist.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/ui/screens/ResultScreen.kt:733",
+      "fixture": "whattoeat-map-search-v1",
+      "fallback_capable": false,
+      "evidence": [],
+      "status": "implemented_source_only",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-26",
+          "action": "Compared source placement and destination explanation on both platforms.",
+          "result": "Capability exists on both, but route placement and rendered parity remain open."
+        }
+      ],
+      "reopen_history": []
+    },
+    {
+      "id": "location_fallback.indoor_recovery.action",
+      "route_state": "result",
+      "element": "indoor_location_fallback",
+      "dimension": "indoor provider priority fresh timeout and recovery flow",
+      "classification": "functional",
+      "source_ref": {
+        "kind": "source",
+        "value": "Location resolution prioritizes fused/network providers, fresh request with timeout, last known fallback, and concise Korean recovery UI with manual selection primary.",
+        "location": "app/src/main/java/com/nasfinder/whattoeat/data/LocationFallbackPolicy.kt"
+      },
+      "target_observation": "Implemented LocationFallbackPolicy and LocationService prioritized provider routing, fresh location timeout, last-known selection, and ResultScreen LocationDeniedState; device trace unverified.",
+      "implementation_ref": "app/src/main/java/com/nasfinder/whattoeat/data/LocationFallbackPolicy.kt",
+      "fixture": "whattoeat-0.4.2-location-fallback",
+      "fallback_capable": true,
+      "evidence": [],
+      "status": "implemented_source_only",
+      "attempts": [
+        {
+          "attempt": 1,
+          "date": "2026-08-27",
+          "action": "Implemented provider priority (fused -> network -> gps -> passive), timeout fallback to last-known location, and concise Korean recovery UI with manual selection primary.",
+          "result": "Source implemented and unit tested; device trace unverified."
+        }
+      ],
+      "reopen_history": []
     }
   ]
 }

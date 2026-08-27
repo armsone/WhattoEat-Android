@@ -8,6 +8,7 @@ import com.nasfinder.whattoeat.model.LocationMode
 import com.nasfinder.whattoeat.model.MapProvider
 import com.nasfinder.whattoeat.model.RegionUsage
 import com.nasfinder.whattoeat.model.ReminderLeadTime
+import com.nasfinder.whattoeat.model.SituationFilter
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -30,6 +31,7 @@ class ChoiceStore(context: Context) {
         private const val KEY_LUNCH_MINUTE = "lunchMinute"
         private const val KEY_LUNCH_LEAD_MINUTES = "lunchLeadMinutes"
         private const val KEY_MAP_PROVIDER = "mapProvider"
+        private const val KEY_SITUATION_FILTER = "situationFilter"
     }
 
     // --- Settings & Location Preferences ---
@@ -122,6 +124,15 @@ class ChoiceStore(context: Context) {
                 MapProvider.APPLE -> "apple"
             }
             prefs.edit().putString(KEY_MAP_PROVIDER, str).apply()
+        }
+
+    var situationFilter: SituationFilter
+        get() {
+            val key = prefs.getString(KEY_SITUATION_FILTER, "all")
+            return SituationFilter.fromKey(key)
+        }
+        set(value) {
+            prefs.edit().putString(KEY_SITUATION_FILTER, value.name.lowercase()).apply()
         }
 
     // --- Choice Records ---

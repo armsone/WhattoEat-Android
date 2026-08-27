@@ -29,8 +29,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.nasfinder.whattoeat.model.LocationMode
 import com.nasfinder.whattoeat.model.AppPage
+import com.nasfinder.whattoeat.model.SituationFilter
+import com.nasfinder.whattoeat.theme.AccentRed
 import com.nasfinder.whattoeat.theme.AppTypography
 import com.nasfinder.whattoeat.theme.CanvasLineAlpha80
 import com.nasfinder.whattoeat.theme.CaramelDeep
@@ -49,6 +54,8 @@ import com.nasfinder.whattoeat.viewmodel.MainViewModel
 
 @Composable
 fun HomeScreen(viewModel: MainViewModel) {
+    val selectedFilter by viewModel.selectedSituationFilter.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -71,7 +78,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                 contentAlignment = Alignment.Center
             ) {
                 ReferenceIconWell(size = 34.dp) {
-                    IconGear(tint = com.nasfinder.whattoeat.theme.AccentRed)
+                    IconGear(tint = AccentRed)
                 }
             }
         }
@@ -79,6 +86,13 @@ fun HomeScreen(viewModel: MainViewModel) {
         Spacer(modifier = Modifier.height(24.dp))
 
         HomeHeroCta(viewModel)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        SituationFilterRow(
+            selectedFilter = selectedFilter,
+            onSelectFilter = { viewModel.setSituationFilter(it) }
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -133,7 +147,6 @@ fun HomeScreen(viewModel: MainViewModel) {
         }
     }
 }
-
 @Composable
 private fun HomeLocationCard(
     icon: @Composable () -> Unit,
@@ -224,6 +237,56 @@ private fun HomeHeroCta(viewModel: MainViewModel) {
                     color = CharcoalText
                 )
                 IconChevronRight(tint = CharcoalText, modifier = Modifier.size(14.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun SituationFilterRow(
+    selectedFilter: SituationFilter,
+    onSelectFilter: (SituationFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(scrollState)
+            .testTag("home_situationFilterRow"),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SituationFilter.entries.forEach { filter ->
+            val isSelected = filter == selectedFilter
+            val shape = RoundedCornerShape(12.dp)
+            Box(
+                modifier = Modifier
+                    .testTag("home_situationFilter_${filter.name.lowercase()}")
+                    .shadow(
+                        elevation = if (isSelected) 2.dp else 0.dp,
+                        shape = shape,
+                        ambientColor = CaramelDeep.copy(alpha = 0.08f),
+                        spotColor = CaramelDeep.copy(alpha = 0.08f)
+                    )
+                    .background(if (isSelected) SelectionMint else Ivory, shape)
+                    .border(
+                        width = 1.dp,
+                        color = if (isSelected) AccentRed.copy(alpha = 0.65f) else CanvasLineAlpha80,
+                        shape = shape
+                    )
+                    .clip(shape)
+                    .clickable(role = Role.Button) { onSelectFilter(filter) }
+                    .padding(horizontal = 13.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = filter.displayName,
+                    style = AppTypography.caption.copy(
+                        fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium,
+                        color = if (isSelected) AccentRed else CharcoalText
+                    )
+                )
             }
         }
     }
