@@ -9,8 +9,9 @@ Android 네이티브 앱. 구형 handoff와 이전 캡처는 역사 자료이며
 - Kotlin 2.1 + Jetpack Compose (AndroidX BOM), 외부 런타임 의존성 없음
 - Gradle 9.5.0 (wrapper 포함), AGP 9.3.0, compileSdk/targetSdk 37, minSdk 26
 - `applicationId` / `namespace`: `com.nasfinder.whattoeat`
-- versionName `0.4.2`, versionCode `343840`, `BuildConfig.BUILD_STAMP = "202608271840"`
+- versionName `0.4.3`, versionCode `346549`, `BuildConfig.BUILD_STAMP = "202608291549"`
 - 설정에서 공식 GitHub Releases의 허용 APK를 자동 또는 수동으로 확인·다운로드하고 검증 후 Android 설치자로 넘김
+- 위치 권한을 처음 한 번 요청하고, 다시 묻지 않도록 거부한 경우 앱 설정으로 바로 이동하는 복구 안내를 표시
 
 ## 빌드
 

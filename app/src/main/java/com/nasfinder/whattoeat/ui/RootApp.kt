@@ -20,10 +20,12 @@ import com.nasfinder.whattoeat.model.AppPage
 import com.nasfinder.whattoeat.ui.components.AppBottomBar
 import com.nasfinder.whattoeat.ui.components.AppleMapFailureAlertDialog
 import com.nasfinder.whattoeat.ui.components.BusinessInfoAlertDialog
+import com.nasfinder.whattoeat.ui.components.LocationDeniedAlertDialog
 import com.nasfinder.whattoeat.ui.components.MissingMapAlertDialog
 import com.nasfinder.whattoeat.ui.components.NotificationDeniedAlertDialog
 import com.nasfinder.whattoeat.ui.components.OtherMapPickerDialog
 import com.nasfinder.whattoeat.ui.components.PhotoInfoSheet
+import com.nasfinder.whattoeat.ui.components.openAppSettings
 import com.nasfinder.whattoeat.data.MapProviderHelper
 import com.nasfinder.whattoeat.model.MapProvider
 import com.nasfinder.whattoeat.theme.MintBase
@@ -45,6 +47,7 @@ fun RootApp(viewModel: MainViewModel) {
     val showOtherMapPicker by viewModel.showOtherMapPicker.collectAsState()
     val showBusinessInfoAlert by viewModel.showBusinessInfoAlert.collectAsState()
     val showNotificationDeniedAlert by viewModel.showNotificationDeniedAlert.collectAsState()
+    val showLocationDeniedAlert by viewModel.showLocationDeniedAlert.collectAsState()
     val showPhotoSheet by viewModel.showPhotoSheet.collectAsState()
     val selectedPhotoInformation by viewModel.selectedPhotoInformation.collectAsState()
 
@@ -115,6 +118,16 @@ fun RootApp(viewModel: MainViewModel) {
 
         if (showNotificationDeniedAlert) {
             NotificationDeniedAlertDialog(onDismiss = { viewModel.dismissNotificationDeniedAlert() })
+        }
+
+        if (showLocationDeniedAlert) {
+            LocationDeniedAlertDialog(
+                onOpenSettings = {
+                    viewModel.dismissLocationDeniedAlert()
+                    openAppSettings(context)
+                },
+                onDismiss = { viewModel.dismissLocationDeniedAlert() }
+            )
         }
 
         if (showPhotoSheet && selectedPhotoInformation != null) {

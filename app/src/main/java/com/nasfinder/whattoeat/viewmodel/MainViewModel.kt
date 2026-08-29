@@ -129,6 +129,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var requestNotificationPermission: (() -> Unit)? = null
     private var pendingAutoRecommendationAfterPermission = false
     private var pendingNotifyEnableContext: Context? = null
+    private var isRequestingLocationPermission = false
+    private var justFinishedPermissionRequest = false
+    private var isMatchupActive = false
+
+    private val _showLocationDeniedAlert = MutableStateFlow(false)
+    val showLocationDeniedAlert: StateFlow<Boolean> = _showLocationDeniedAlert.asStateFlow()
 
     // Decision state
     private val _currentDecision = MutableStateFlow<Decision?>(null)
@@ -214,6 +220,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun applyMatchupState(state: String?) {
         freezeMatchupLoadingAnimation = shouldFreezeMatchupLoadingAnimation(state, BuildConfig.DEBUG)
         if (!BuildConfig.DEBUG || state.isNullOrBlank()) return
+        isMatchupActive = true
         _matchupRegionSearchFocused.value = state == "region-search"
 
         val restaurants = listOf(
@@ -328,17 +335,109 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onForegroundResume(canShowRuntimePrompt: ((Array<String>) -> Boolean)? = null) {
+        if (isMatchupActive) return
+
+        val hasPermission = locationService.hasLocationPermission()
+        updatePermissionStatus()
+
+        if (hasPermission) {
+            _showLocationDeniedAlert.value = false
+            onLocationPermissionGranted()
+            return
+        }
+
+        if (justFinishedPermissionRequest) {
+            justFinishedPermissionRequest = false
+            return
+        }
+
+        if (isRequestingLocationPermission) {
+            return
+        }
+
+        val requiredPermissions = arrayOf(
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        val canPrompt = canShowRuntimePrompt?.invoke(requiredPermissions) ?: (!store.hasRequestedLocationPermission)
+
+        if (canPrompt) {
+            requestLocationPermissionInternal()
+        } else {
+            _showLocationDeniedAlert.value = true
+        }
+    }
+
+    fun requestLocationPermissionInternal() {
+        if (locationService.hasLocationPermission()) {
+            updatePermissionStatus()
+            onLocationPermissionGranted()
+            return
+        }
+        store.hasRequestedLocationPermission = true
+        isRequestingLocationPermission = true
+        if (requestLocationPermission != null) {
+            requestLocationPermission?.invoke()
+        } else {
+            isRequestingLocationPermission = false
+            _locationFailureReason.value = LocationFailureReason.PERMISSION_DENIED
+            _locationRecoveryMessage.value = LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.PERMISSION_DENIED)
+        }
+    }
+
+    fun onLocationPermissionLauncherResult() {
+        isRequestingLocationPermission = false
+        justFinishedPermissionRequest = true
+        val hasPermission = locationService.hasLocationPermission()
+        updatePermissionStatus()
+
+        if (hasPermission) {
+            _showLocationDeniedAlert.value = false
+            onLocationPermissionGranted()
+        } else {
+            onLocationPermissionDenied()
+        }
+    }
+
     fun onLocationPermissionResult() {
+        onLocationPermissionLauncherResult()
+    }
+
+    private fun onLocationPermissionGranted() {
+        _showLocationDeniedAlert.value = false
+        if (_locationFailureReason.value == LocationFailureReason.PERMISSION_DENIED) {
+            _locationFailureReason.value = null
+        }
+
         if (pendingAutoRecommendationAfterPermission) {
             pendingAutoRecommendationAfterPermission = false
-            if (locationService.hasLocationPermission()) {
-                executeAutoRecommendation()
-            } else {
-                _locationFailureReason.value = LocationFailureReason.PERMISSION_DENIED
-                _locationRecoveryMessage.value = LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.PERMISSION_DENIED)
-                _recommendationPhase.value = RecommendationPhase.LOCATION_DENIED
-            }
+            executeAutoRecommendation()
+        } else if (_currentPage.value == AppPage.RESULT &&
+            _recommendationPhase.value == RecommendationPhase.LOCATION_DENIED &&
+            _locationMode.value == LocationMode.AUTO
+        ) {
+            executeAutoRecommendation()
+        } else if (_currentPage.value == AppPage.REGION &&
+            (_regionStatusText.value == LocationFallbackPolicy.resolveStatusText(LocationFailureReason.PERMISSION_DENIED) || _nearbyRegions.value.isEmpty())
+        ) {
+            refreshLocationInRegionScreen()
         }
+    }
+
+    private fun onLocationPermissionDenied() {
+        if (pendingAutoRecommendationAfterPermission) {
+            pendingAutoRecommendationAfterPermission = false
+            _locationFailureReason.value = LocationFailureReason.PERMISSION_DENIED
+            _locationRecoveryMessage.value = LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.PERMISSION_DENIED)
+            _recommendationPhase.value = RecommendationPhase.LOCATION_DENIED
+        } else if (_currentPage.value == AppPage.REGION) {
+            _regionStatusText.value = LocationFallbackPolicy.resolveStatusText(LocationFailureReason.PERMISSION_DENIED)
+        }
+    }
+
+    fun dismissLocationDeniedAlert() {
+        _showLocationDeniedAlert.value = false
     }
 
     fun onNotificationPermissionResult(granted: Boolean, context: Context) {
@@ -465,7 +564,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (requestLocationPermission != null) {
                     pendingAutoRecommendationAfterPermission = true
                     stopLoadingTimer()
-                    requestLocationPermission?.invoke()
+                    requestLocationPermissionInternal()
                 } else if (activeRequestToken == requestToken) {
                     _locationFailureReason.value = LocationFailureReason.PERMISSION_DENIED
                     _locationRecoveryMessage.value = LocationFallbackPolicy.resolveRecoveryMessage(LocationFailureReason.PERMISSION_DENIED)

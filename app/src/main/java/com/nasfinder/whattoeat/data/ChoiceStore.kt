@@ -32,6 +32,7 @@ class ChoiceStore(context: Context) {
         private const val KEY_LUNCH_LEAD_MINUTES = "lunchLeadMinutes"
         private const val KEY_MAP_PROVIDER = "mapProvider"
         private const val KEY_SITUATION_FILTER = "situationFilter"
+        private const val KEY_HAS_REQUESTED_LOCATION_PERMISSION = "hasRequestedLocationPermission"
     }
 
     // --- Settings & Location Preferences ---
@@ -134,6 +135,10 @@ class ChoiceStore(context: Context) {
         set(value) {
             prefs.edit().putString(KEY_SITUATION_FILTER, value.name.lowercase()).apply()
         }
+
+    var hasRequestedLocationPermission: Boolean
+        get() = prefs.getBoolean(KEY_HAS_REQUESTED_LOCATION_PERMISSION, false)
+        set(value) = prefs.edit().putBoolean(KEY_HAS_REQUESTED_LOCATION_PERMISSION, value).apply()
 
     // --- Choice Records ---
 

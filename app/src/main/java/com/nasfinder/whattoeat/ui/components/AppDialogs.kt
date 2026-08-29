@@ -1,5 +1,9 @@
 package com.nasfinder.whattoeat.ui.components
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -139,6 +143,38 @@ fun NotificationDeniedAlertDialog(onDismiss: () -> Unit) {
             modifier = Modifier.padding(horizontal = 4.dp)
         )
         AlertActionButton(text = "확인", onClick = onDismiss, testTag = "notificationDeniedAlert_confirm")
+    }
+}
+
+@Composable
+fun LocationDeniedAlertDialog(
+    onOpenSettings: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AppAlertContainer(onDismissRequest = onDismiss, testTag = "locationDeniedAlert") {
+        Text(
+            text = "위치 권한이 꺼져 있어요",
+            style = AppTypography.sectionTitle,
+            modifier = Modifier.testTag("locationDeniedAlert_title")
+        )
+        Text(
+            text = "현재 위치 주변의 맛있는 한 끼를 추천받으려면 기기 설정에서 위치 권한을 켜 주세요.",
+            style = AppTypography.supporting,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        AlertActionButton(text = "설정 열기", onClick = onOpenSettings, testTag = "locationDeniedAlert_settings")
+        AlertActionButton(text = "취소", onClick = onDismiss, isDestructiveOrCancel = true, testTag = "locationDeniedAlert_cancel")
+    }
+}
+
+fun openAppSettings(context: Context) {
+    try {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        // Safe fallback per no-crash policy
     }
 }
 

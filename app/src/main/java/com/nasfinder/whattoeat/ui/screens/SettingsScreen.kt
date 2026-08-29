@@ -120,7 +120,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             if (locationPermissionStatus == "사용 중") {
                                 openAppSettings(context)
                             } else {
-                                viewModel.requestLocationPermission?.invoke() ?: openAppSettings(context)
+                                viewModel.requestLocationPermissionInternal()
                             }
                         }
                             .padding(horizontal = 14.dp, vertical = 8.dp)

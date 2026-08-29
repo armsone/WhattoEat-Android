@@ -9,6 +9,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.core.app.ActivityCompat
 import com.nasfinder.whattoeat.data.NotificationHelper
 import com.nasfinder.whattoeat.theme.WhattoEatTheme
 import com.nasfinder.whattoeat.ui.RootApp
@@ -21,8 +22,7 @@ class MainActivity : ComponentActivity() {
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {
-        viewModel.updatePermissionStatus()
-        viewModel.onLocationPermissionResult()
+        viewModel.onLocationPermissionLauncherResult()
     }
 
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -72,5 +72,20 @@ class MainActivity : ComponentActivity() {
                 RootApp(viewModel = viewModel)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.onForegroundResume(
+            canShowRuntimePrompt = { permissions ->
+                if (!viewModel.store.hasRequestedLocationPermission) {
+                    true
+                } else {
+                    permissions.any {
+                        ActivityCompat.shouldShowRequestPermissionRationale(this, it)
+                    }
+                }
+            }
+        )
     }
 }

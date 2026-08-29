@@ -160,4 +160,14 @@ class ChoiceStoreTest {
         assertNull(loaded.photoProvider)
         assertNull(loaded.photoKind)
     }
+
+    @Test
+    fun `hasRequestedLocationPermission persists across store instances`() {
+        assertFalse(store.hasRequestedLocationPermission)
+        store.hasRequestedLocationPermission = true
+        assertTrue(store.hasRequestedLocationPermission)
+
+        val reopened = ChoiceStore(ApplicationProvider.getApplicationContext())
+        assertTrue(reopened.hasRequestedLocationPermission)
+    }
 }

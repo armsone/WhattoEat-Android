@@ -11,12 +11,12 @@ android {
         applicationId = "com.nasfinder.whattoeat"
         minSdk = 26
         targetSdk = 37
-        versionCode = 343840
-        versionName = "0.4.2"
+        versionCode = 346549
+        versionName = "0.4.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BUILD_STAMP", "\"202608271840\"")
+        buildConfigField("String", "BUILD_STAMP", "\"202608291549\"")
         buildConfigField("String", "API_BASE_URL", "\"https://nasfinder.com\"")
     }
 
