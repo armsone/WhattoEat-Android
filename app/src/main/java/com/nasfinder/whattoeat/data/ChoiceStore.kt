@@ -94,6 +94,10 @@ class ChoiceStore(context: Context) {
         get() = prefs.getBoolean(KEY_LUNCH_NOTIFY_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_LUNCH_NOTIFY_ENABLED, value).apply()
 
+    var lunchExcludeHolidays: Boolean
+        get() = prefs.getBoolean("lunchExcludeHolidays", false)
+        set(value) = prefs.edit().putBoolean("lunchExcludeHolidays", value).apply()
+
     var lunchHour: Int
         get() = prefs.getInt(KEY_LUNCH_HOUR, 12)
         set(value) = prefs.edit().putInt(KEY_LUNCH_HOUR, value).apply()

@@ -9,6 +9,18 @@ class AlarmReceiver : BroadcastReceiver {
     constructor() : super()
 
     override fun onReceive(context: Context, intent: Intent?) {
-        NotificationHelper.showLunchNotification(context)
+        val appContext = context.applicationContext
+        val pending = goAsync()
+        Thread {
+            try {
+                val store = com.nasfinder.whattoeat.data.ChoiceStore(appContext)
+                if (store.lunchNotifyEnabled && store.lunchExcludeHolidays) {
+                    com.nasfinder.whattoeat.data.KoreanHolidayService.refresh(appContext)
+                }
+                NotificationHelper.showLunchNotification(appContext)
+            } finally {
+                pending.finish()
+            }
+        }.start()
     }
 }

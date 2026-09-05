@@ -10,6 +10,10 @@ class WhattoEatApp : Application() {
         super.onCreate()
         ImageLoader.installHttpCache(this)
         NotificationHelper.createNotificationChannel(this)
+        val store = com.nasfinder.whattoeat.data.ChoiceStore(this)
+        if (store.lunchNotifyEnabled && store.lunchExcludeHolidays) {
+            Thread { com.nasfinder.whattoeat.data.KoreanHolidayService.refresh(this) }.start()
+        }
         DirectUpdateManager.get(this).start()
     }
 }

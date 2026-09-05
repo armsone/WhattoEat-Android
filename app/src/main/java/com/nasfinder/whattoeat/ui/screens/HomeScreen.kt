@@ -214,6 +214,7 @@ private fun HomeHeroCta(viewModel: MainViewModel) {
                     .border(1.dp, CanvasLineAlpha80, RoundedCornerShape(cornerRadius))
                     .clip(RoundedCornerShape(cornerRadius))
                     .clickable(role = Role.Button) {
+                        viewModel.setSituationFilter(SituationFilter.ALL)
                         val lat = viewModel.currentLatitude.value
                         val lng = viewModel.currentLongitude.value
                         if (viewModel.locationMode.value == LocationMode.MANUAL && lat != null && lng != null) {

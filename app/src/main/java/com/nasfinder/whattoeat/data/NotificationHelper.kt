@@ -94,6 +94,15 @@ object NotificationHelper {
     fun showLunchNotification(context: Context) {
         createNotificationChannel(context)
         val store = ChoiceStore(context)
+        if (!store.lunchNotifyEnabled) return
+        if (store.lunchExcludeHolidays) {
+            val now = java.time.LocalDateTime.now()
+            val today = now.toLocalDate()
+            val lunchDay = if (store.lunchHour * 60 + store.lunchMinute < store.lunchLeadMinutes)
+                today.plusDays(1) else today
+            if (!KoreanHolidayService.isWorkingDay(context, today) ||
+                !KoreanHolidayService.isWorkingDay(context, lunchDay)) return
+        }
         val region = store.manualResolvedName.ifEmpty { "내 주변" }
         val lastMenu = store.lastTopMenu
 

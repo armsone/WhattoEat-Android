@@ -74,6 +74,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val locationPermissionStatus by viewModel.locationPermissionStatus.collectAsState()
     val selectedProvider by viewModel.selectedMapProvider.collectAsState()
     val notifyEnabled by viewModel.lunchNotifyEnabled.collectAsState()
+    val excludeHolidays by viewModel.lunchExcludeHolidays.collectAsState()
     val lunchHour by viewModel.lunchHour.collectAsState()
     val lunchMinute by viewModel.lunchMinute.collectAsState()
     val leadTime by viewModel.lunchLeadTime.collectAsState()
@@ -189,6 +190,22 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 ) {
                     Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
                         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CanvasLineAlpha80))
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "휴일 제외", style = AppTypography.rowTitle)
+                            AppToggle(
+                                checked = excludeHolidays,
+                                onCheckedChange = { viewModel.setLunchExcludeHolidays(it, context) }
+                            )
+                        }
+                        Text(
+                            text = "토·일요일과 한클립 달력의 한국 공휴일에는 알리지 않아요. 공휴일 정보가 없는 연도는 알리지 않아요.",
+                            style = AppTypography.caption2,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                         BoxWithConstraints(modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) {
                             val isWide = maxWidth >= 360.dp
                             val leadTimeChips: @Composable () -> Unit = {

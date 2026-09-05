@@ -10,6 +10,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
 import android.os.CancellationSignal
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
@@ -201,7 +202,7 @@ class LocationService(private val context: Context) {
                         try { locationManager.removeUpdates(listener) } catch (e: Exception) {}
                     }
                     try {
-                        locationManager.requestSingleUpdate(provider, listener, null)
+                        locationManager.requestSingleUpdate(provider, listener, Looper.getMainLooper())
                     } catch (e: Exception) {
                         if (cont.isActive) cont.resume(null)
                     }

@@ -179,6 +179,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lunchNotifyEnabled = MutableStateFlow(false)
     val lunchNotifyEnabled: StateFlow<Boolean> = _lunchNotifyEnabled.asStateFlow()
 
+    private val _lunchExcludeHolidays = MutableStateFlow(false)
+    val lunchExcludeHolidays: StateFlow<Boolean> = _lunchExcludeHolidays.asStateFlow()
+
     private val _lunchHour = MutableStateFlow(12)
     val lunchHour: StateFlow<Int> = _lunchHour.asStateFlow()
 
@@ -202,6 +205,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedMapProvider.value = store.mapProvider
         _selectedSituationFilter.value = store.situationFilter
         _lunchNotifyEnabled.value = store.lunchNotifyEnabled
+        _lunchExcludeHolidays.value = store.lunchExcludeHolidays
         _lunchHour.value = store.lunchHour
         _lunchMinute.value = store.lunchMinute
         _lunchLeadTime.value = ReminderLeadTime.fromMinutes(store.lunchLeadMinutes)
@@ -458,6 +462,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun navigateTo(page: AppPage) {
         if (page == AppPage.RESULT) {
+            setSituationFilter(SituationFilter.ALL)
             _currentDecision.value = null
             _isCurrentDecisionRecorded.value = false
             startRecommendationForCurrentMode()
@@ -990,6 +995,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setMapProvider(provider: MapProvider) {
         store.mapProvider = provider
         _selectedMapProvider.value = provider
+    }
+
+    fun setLunchExcludeHolidays(enabled: Boolean, context: Context) {
+        store.lunchExcludeHolidays = enabled
+        _lunchExcludeHolidays.value = enabled
+        if (store.lunchNotifyEnabled) NotificationHelper.scheduleDailyAlarm(context)
+        if (enabled) {
+            val appContext = context.applicationContext
+            Thread { com.nasfinder.whattoeat.data.KoreanHolidayService.refresh(appContext) }.start()
+        }
     }
 
     fun setLunchNotifyEnabled(enabled: Boolean, context: Context) {
