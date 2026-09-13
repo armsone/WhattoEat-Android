@@ -134,7 +134,7 @@ class DirectUpdateManager private constructor(private val context: Context) {
             .setMimeType(APK_MIME)
             .setAllowedOverMetered(!automatic)
             .setAllowedOverRoaming(false)
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, candidate.name)
         downloadId = downloads.enqueue(request)
         prefs.edit().putLong(KEY_DOWNLOAD_ID, downloadId).apply()
