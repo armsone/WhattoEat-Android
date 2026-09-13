@@ -241,7 +241,7 @@ class DirectUpdateManager private constructor(private val context: Context) {
             for (index in 0 until assets.length()) {
                 val asset = assets.getJSONObject(index)
                 val name = asset.getString("name")
-                if (name != allowedName || asset.getString("state") != "uploaded") continue
+                if (!name.equals(allowedName, ignoreCase = true) || asset.getString("state") != "uploaded") continue
                 val size = asset.getLong("size")
                 val digest = asset.optString("digest")
                 val url = asset.getString("browser_download_url")
