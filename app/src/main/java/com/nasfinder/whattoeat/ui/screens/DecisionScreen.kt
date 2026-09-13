@@ -145,6 +145,7 @@ fun DecisionScreen(viewModel: MainViewModel) {
                     }
                     Text(text = current.menu, style = AppTypography.decisionMenu)
                     Text(text = restaurant.name, style = AppTypography.decisionRestaurant)
+                    com.nasfinder.whattoeat.ui.components.PublicDiningRecord(restaurant, showDetails = true)
                     restaurant.distanceMeters?.let { d ->
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             IconNavigationArrow(tint = AccentRed, modifier = Modifier.size(12.dp))

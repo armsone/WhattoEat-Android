@@ -622,19 +622,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val response = ApiClient.fetchRestaurants(lat, lng)
                 if (activeRequestToken != requestToken) return@launch
 
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.nasfinder.whattoeat.data.PublicDiningPriority.load(context)
+                }
                 val currentFilter = _selectedSituationFilter.value
                 val filtered = com.nasfinder.whattoeat.data.RecommendationPool.buildPool(response.restaurants, currentFilter)
 
                 val pool: List<Restaurant>
                 if (filtered.isNotEmpty()) {
                     _isCategoryFallbackApplied.value = false
-                    pool = filtered.shuffled()
+                    pool = com.nasfinder.whattoeat.data.PublicDiningPriority.prioritized(filtered.shuffled())
                 } else {
                     // Fallback to all-menu pool if filtered candidates are empty without falsely claiming category filter was applied
                     val allPool = com.nasfinder.whattoeat.data.RecommendationPool.buildPool(response.restaurants, SituationFilter.ALL)
                     if (allPool.isNotEmpty()) {
                         _isCategoryFallbackApplied.value = (currentFilter != SituationFilter.ALL)
-                        pool = allPool.shuffled()
+                        pool = com.nasfinder.whattoeat.data.PublicDiningPriority.prioritized(allPool.shuffled())
                     } else {
                         _isCategoryFallbackApplied.value = false
                         _recommendationPhase.value = RecommendationPhase.EMPTY

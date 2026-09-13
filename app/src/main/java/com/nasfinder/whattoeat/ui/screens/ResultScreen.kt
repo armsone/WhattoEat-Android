@@ -536,6 +536,7 @@ private fun MainResultCard(
                     Text(text = menu, style = AppTypography.caption2)
                 }
                 Text(text = main.name, style = AppTypography.title2, maxLines = 2)
+                com.nasfinder.whattoeat.ui.components.PublicDiningRecord(main)
                 Text(text = categoryLeaf, style = AppTypography.subheadline, maxLines = 1)
                 main.distanceMeters?.let { d ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -684,6 +685,7 @@ private fun SecondaryGridCard(
                     style = AppTypography.smallCardName,
                     maxLines = 1
                 )
+                com.nasfinder.whattoeat.ui.components.PublicDiningRecord(restaurant)
                 Text(
                     text = shortCategory,
                     style = AppTypography.smallCardMeta,
