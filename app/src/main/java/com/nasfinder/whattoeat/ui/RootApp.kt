@@ -10,8 +10,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,6 +29,7 @@ import com.nasfinder.whattoeat.ui.components.MissingMapAlertDialog
 import com.nasfinder.whattoeat.ui.components.NotificationDeniedAlertDialog
 import com.nasfinder.whattoeat.ui.components.OtherMapPickerDialog
 import com.nasfinder.whattoeat.ui.components.PhotoInfoSheet
+import com.nasfinder.whattoeat.ui.components.UpdateAvailableAlertDialog
 import com.nasfinder.whattoeat.ui.components.openAppSettings
 import com.nasfinder.whattoeat.data.MapProviderHelper
 import com.nasfinder.whattoeat.model.MapProvider
@@ -37,10 +42,14 @@ import com.nasfinder.whattoeat.ui.screens.RegionScreen
 import com.nasfinder.whattoeat.ui.screens.ResultScreen
 import com.nasfinder.whattoeat.ui.screens.SettingsScreen
 import com.nasfinder.whattoeat.viewmodel.MainViewModel
+import com.nasfinder.whattoeat.update.DirectUpdateManager
+import com.nasfinder.whattoeat.update.UpdatePhase
 
 @Composable
 fun RootApp(viewModel: MainViewModel) {
     val context = LocalContext.current
+    val updateManager = remember(context) { DirectUpdateManager.get(context) }
+    val updateState by updateManager.state.collectAsState()
     val currentPage by viewModel.currentPage.collectAsState()
     val showMissingMapAlert by viewModel.showMissingMapAlert.collectAsState()
     val missingMapProvider by viewModel.missingMapProvider.collectAsState()
@@ -50,6 +59,19 @@ fun RootApp(viewModel: MainViewModel) {
     val showLocationDeniedAlert by viewModel.showLocationDeniedAlert.collectAsState()
     val showPhotoSheet by viewModel.showPhotoSheet.collectAsState()
     val selectedPhotoInformation by viewModel.selectedPhotoInformation.collectAsState()
+    var announcedUpdateVersion by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(updateState.phase, updateState.version) {
+        val version = updateState.version ?: return@LaunchedEffect
+        val updateIsReadyOrAvailable = updateState.phase in setOf(
+            UpdatePhase.AVAILABLE,
+            UpdatePhase.DOWNLOADING,
+            UpdatePhase.READY
+        )
+        if (updateIsReadyOrAvailable && updateManager.markAnnouncementShown(version)) {
+            announcedUpdateVersion = version
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -114,6 +136,17 @@ fun RootApp(viewModel: MainViewModel) {
 
         if (showBusinessInfoAlert) {
             BusinessInfoAlertDialog(onDismiss = { viewModel.dismissBusinessInfo() })
+        }
+
+        announcedUpdateVersion?.let { version ->
+            UpdateAvailableAlertDialog(
+                version = version,
+                onShowUpdate = {
+                    announcedUpdateVersion = null
+                    viewModel.navigateTo(AppPage.PROFILE)
+                },
+                onDismiss = { announcedUpdateVersion = null }
+            )
         }
 
         if (showNotificationDeniedAlert) {

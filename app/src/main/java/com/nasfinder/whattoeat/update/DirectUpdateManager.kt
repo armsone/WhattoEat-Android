@@ -94,6 +94,12 @@ class DirectUpdateManager private constructor(private val context: Context) {
         if (enabled && _state.value.phase == UpdatePhase.AVAILABLE && canAutoDownload()) download(automatic = true)
     }
 
+    fun markAnnouncementShown(version: String): Boolean {
+        if (prefs.getString(KEY_ANNOUNCED_VERSION, null) == version) return false
+        prefs.edit().putString(KEY_ANNOUNCED_VERSION, version).apply()
+        return true
+    }
+
     fun check(automatic: Boolean = false) {
         if (_state.value.phase == UpdatePhase.CHECKING || _state.value.phase == UpdatePhase.DOWNLOADING) return
         _state.value = _state.value.copy(phase = UpdatePhase.CHECKING, message = "새 버전을 확인하는 중…")
@@ -322,6 +328,7 @@ class DirectUpdateManager private constructor(private val context: Context) {
         private const val APK_MIME = "application/vnd.android.package-archive"
         private const val KEY_AUTOMATIC = "automatic_download"
         private const val KEY_DOWNLOAD_ID = "download_id"
+        private const val KEY_ANNOUNCED_VERSION = "announced_version"
         @Volatile private var instance: DirectUpdateManager? = null
         fun get(context: Context): DirectUpdateManager = instance ?: synchronized(this) {
             instance ?: DirectUpdateManager(context.applicationContext).also { instance = it }

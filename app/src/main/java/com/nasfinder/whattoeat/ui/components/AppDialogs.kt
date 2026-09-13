@@ -134,6 +134,29 @@ fun BusinessInfoAlertDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
+fun UpdateAvailableAlertDialog(
+    version: String,
+    onShowUpdate: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AppAlertContainer(onDismissRequest = onDismiss, testTag = "updateAvailableAlert") {
+        Text(text = "새 업데이트가 있어요", style = AppTypography.sectionTitle)
+        Text(
+            text = "버전 ${version}을 사용할 수 있어요. 업데이트 화면에서 다운로드와 설치를 진행해 주세요.",
+            style = AppTypography.supporting,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        AlertActionButton(text = "업데이트 보기", onClick = onShowUpdate, testTag = "updateAvailableAlert_open")
+        AlertActionButton(
+            text = "나중에",
+            onClick = onDismiss,
+            isDestructiveOrCancel = true,
+            testTag = "updateAvailableAlert_dismiss"
+        )
+    }
+}
+
+@Composable
 fun NotificationDeniedAlertDialog(onDismiss: () -> Unit) {
     AppAlertContainer(onDismissRequest = onDismiss, testTag = "notificationDeniedAlert") {
         Text(text = "알림이 꺼져 있어요", style = AppTypography.sectionTitle)
