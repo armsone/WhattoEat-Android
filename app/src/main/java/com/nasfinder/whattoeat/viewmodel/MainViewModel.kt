@@ -557,6 +557,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun triggerLunchNotificationRecommendation() {
+        if (isMatchupActive) return
+        setSituationFilter(SituationFilter.ALL)
+        _currentDecision.value = null
+        _isCurrentDecisionRecorded.value = false
+        val lat = _currentLatitude.value
+        val lng = _currentLongitude.value
+        if (_locationMode.value == LocationMode.MANUAL && lat != null && lng != null) {
+            startManualRecommendation(lat, lng, _currentRegionName.value)
+        } else if (_locationMode.value == LocationMode.MANUAL) {
+            _currentPage.value = AppPage.REGION
+        } else {
+            startAutoRecommendation()
+        }
+    }
+
     private fun executeAutoRecommendation() {
         val requestToken = System.currentTimeMillis()
         activeRequestToken = requestToken

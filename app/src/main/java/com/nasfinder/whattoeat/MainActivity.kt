@@ -66,11 +66,26 @@ class MainActivity : ComponentActivity() {
         NotificationHelper.createNotificationChannel(this)
 
         viewModel.applyMatchupState(intent.getStringExtra("matchup_state"))
+        handleNotificationIntent(intent)
 
         setContent {
             WhattoEatTheme {
                 RootApp(viewModel = viewModel)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: android.content.Intent?) {
+        if (intent == null) return
+        if (intent.getBooleanExtra(NotificationHelper.EXTRA_TRIGGER_RECOMMENDATION, false)) {
+            intent.removeExtra(NotificationHelper.EXTRA_TRIGGER_RECOMMENDATION)
+            viewModel.triggerLunchNotificationRecommendation()
         }
     }
 

@@ -13,6 +13,7 @@ import com.nasfinder.whattoeat.receiver.AlarmReceiver
 import java.util.Calendar
 
 object NotificationHelper {
+    const val EXTRA_TRIGGER_RECOMMENDATION = "trigger_recommendation"
     const val CHANNEL_ID = "whattoeat.lunch.daily"
     const val NOTIFICATION_ID = 1001
     private const val ALARM_REQUEST_CODE = 2001
@@ -115,6 +116,7 @@ object NotificationHelper {
 
         val launchIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_TRIGGER_RECOMMENDATION, true)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
